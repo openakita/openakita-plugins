@@ -1,0 +1,19 @@
+{
+  "id": "translate-skill",
+  "name": "Translation Skill",
+  "version": "1.0.0",
+  "description": "Skill enhancement demo: SKILL.md + translate script",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "skill",
+  "entry": "SKILL.md",
+  "permissions": ["skill"],
+  "requires": {
+    "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {"skill": "SKILL.md"},
+  "category": "skill",
+  "tags": ["demo", "skill", "translate"]
+}

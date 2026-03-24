@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "properties": {
+    "ollama_url": {
+      "type": "string",
+      "default": "http://localhost:11434",
+      "description": "Base URL for the Ollama HTTP API"
+    }
+  }
+}

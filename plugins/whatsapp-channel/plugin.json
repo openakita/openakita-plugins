@@ -1,0 +1,27 @@
+{
+  "id": "whatsapp-channel",
+  "name": "WhatsApp",
+  "version": "1.0.0",
+  "description": "WhatsApp IM channel adapter supporting Cloud API (business) and WhatsApp Web (personal via QR code)",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": ["channel.register", "hooks.basic", "config.read", "config.write", "log", "routes.register"],
+  "requires": {
+    "openakita": ">=1.27.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {
+    "channels": ["whatsapp"]
+  },
+  "onboard": {
+    "type": "qr",
+    "start_endpoint": "/onboard/start",
+    "poll_endpoint": "/onboard/poll",
+    "description": "Scan QR code to link WhatsApp account (Web mode only)"
+  },
+  "category": "channel",
+  "tags": ["im", "whatsapp", "messaging", "cloud-api", "baileys"]
+}

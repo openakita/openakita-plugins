@@ -1,0 +1,19 @@
+{
+  "id": "echo-channel",
+  "name": "Echo Channel",
+  "version": "1.0.0",
+  "description": "IM channel demo: echoes all received messages back",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": ["channel.register", "hooks.basic", "hooks.message", "channel.send"],
+  "requires": {
+    "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {"channels": ["echo"]},
+  "category": "channel",
+  "tags": ["demo", "channel"]
+}

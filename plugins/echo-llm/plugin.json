@@ -1,0 +1,30 @@
+{
+  "id": "echo-llm",
+  "name": "Echo LLM",
+  "version": "1.0.0",
+  "description": "Echo LLM provider for testing — echoes the user prompt back as a response. Exercises the full LLM provider + registry registration pipeline.",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": [
+    "llm.register",
+    "config.read",
+    "config.write",
+    "log",
+    "hooks.basic"
+  ],
+  "requires": {
+    "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {
+    "llm_provider": {
+      "api_type": "echo",
+      "registry": "echo"
+    }
+  },
+  "category": "llm",
+  "tags": ["llm", "echo", "testing"]
+}

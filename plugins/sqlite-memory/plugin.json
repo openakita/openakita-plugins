@@ -1,0 +1,28 @@
+{
+  "id": "sqlite-memory",
+  "name": "SQLite Memory",
+  "version": "1.0.0",
+  "description": "In-process SQLite-based memory backend — zero external dependencies, ideal for testing and lightweight deployments",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": [
+    "memory.write",
+    "config.read",
+    "config.write",
+    "data.own",
+    "log",
+    "hooks.basic"
+  ],
+  "requires": {
+    "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {
+    "memory_backend": "sqlite"
+  },
+  "category": "memory",
+  "tags": ["memory", "sqlite", "lightweight"]
+}

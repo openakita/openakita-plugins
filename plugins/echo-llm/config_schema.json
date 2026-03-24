@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "prefix": {
+      "type": "string",
+      "title": "回复前缀 / Reply Prefix",
+      "description": "Text prepended to all echo responses",
+      "default": "[Echo LLM] "
+    }
+  }
+}

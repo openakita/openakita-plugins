@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "qdrant_url": {
+      "type": "string",
+      "description": "Qdrant HTTP API URL",
+      "default": "http://localhost:6333"
+    },
+    "collection_name": {
+      "type": "string",
+      "description": "Qdrant collection name for vector storage",
+      "default": "openakita_memory"
+    }
+  }
+}

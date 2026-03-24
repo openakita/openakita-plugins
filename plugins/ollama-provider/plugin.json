@@ -1,0 +1,19 @@
+{
+  "id": "ollama-provider",
+  "name": "Ollama LLM Provider",
+  "version": "1.0.0",
+  "description": "LLM dual-registration demo: registers ollama_native api_type and ollama vendor registry",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": ["llm.register", "config.read", "config.write", "hooks.basic"],
+  "requires": {
+    "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {"llm_provider": {"api_type": "ollama_native", "registry_slug": "ollama"}},
+  "category": "llm",
+  "tags": ["demo", "llm", "ollama"]
+}

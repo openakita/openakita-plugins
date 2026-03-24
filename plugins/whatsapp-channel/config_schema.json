@@ -1,0 +1,69 @@
+{
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["cloud_api", "web"],
+      "title": "接入模式 / Mode",
+      "description": "cloud_api: WhatsApp Cloud API (business); web: WhatsApp Web via QR (personal)",
+      "default": "cloud_api"
+    },
+    "phone_number_id": {
+      "type": "string",
+      "title": "手机号 ID / Phone Number ID",
+      "description": "WhatsApp Business phone number ID from Meta developer portal",
+      "x-visible-when": { "mode": "cloud_api" }
+    },
+    "access_token": {
+      "type": "string",
+      "title": "访问令牌 / Access Token",
+      "description": "Graph API permanent access token",
+      "x-visible-when": { "mode": "cloud_api" }
+    },
+    "api_version": {
+      "type": "string",
+      "title": "API 版本 / API Version",
+      "description": "Meta Graph API version",
+      "default": "v21.0",
+      "x-visible-when": { "mode": "cloud_api" }
+    },
+    "verify_token": {
+      "type": "string",
+      "title": "Webhook 验证令牌 / Verify Token",
+      "description": "Custom string for webhook verification",
+      "default": "openakita-verify"
+    },
+    "webhook_port": {
+      "type": "integer",
+      "title": "Webhook 端口 / Webhook Port",
+      "description": "Port for the incoming webhook listener",
+      "default": 9881
+    },
+    "webhook_path": {
+      "type": "string",
+      "title": "Webhook 路径 / Webhook Path",
+      "default": "/whatsapp/webhook"
+    },
+    "node_path": {
+      "type": "string",
+      "title": "Node.js 路径 / Node Path",
+      "description": "Path to node executable",
+      "default": "node",
+      "x-visible-when": { "mode": "web" }
+    },
+    "bridge_port": {
+      "type": "integer",
+      "title": "Bridge 端口 / Bridge Port",
+      "description": "Baileys bridge HTTP API port",
+      "default": 9882,
+      "x-visible-when": { "mode": "web" }
+    },
+    "bridge_data_dir": {
+      "type": "string",
+      "title": "Bridge 数据目录 / Bridge Data Dir",
+      "description": "Directory for Baileys auth/session data",
+      "x-visible-when": { "mode": "web" }
+    }
+  },
+  "required": ["mode"]
+}

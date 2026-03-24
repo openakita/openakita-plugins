@@ -1,0 +1,24 @@
+{
+  "id": "obsidian-kb",
+  "name": "Obsidian 知识库",
+  "version": "2.0.0",
+  "description": "将 Obsidian Vault 接入 OpenAkita 作为 RAG 知识源，支持全文搜索、标签过滤、CLI 交互、日记管理",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": ["tools.register", "hooks.retrieve", "retrieval.register", "config.read", "config.write", "log", "skill"],
+  "requires": {
+    "openakita": ">=1.27.0",
+    "plugin_api": "~1",
+    "python": ">=3.11"
+  },
+  "provides": {
+    "tools": ["obsidian_search", "obsidian_vault_info", "obsidian_open", "obsidian_create", "obsidian_daily"],
+    "retrieval_sources": ["obsidian"],
+    "hooks": ["on_retrieve"],
+    "skill": "SKILL.md"
+  },
+  "category": "knowledge",
+  "tags": ["rag", "obsidian", "knowledge-base", "markdown", "cli"]
+}

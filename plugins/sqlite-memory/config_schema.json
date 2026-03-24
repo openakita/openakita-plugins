@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "properties": {
+    "db_path": {
+      "type": "string",
+      "title": "数据库路径 / Database Path",
+      "description": "SQLite database file path. Leave empty to use plugin data directory.",
+      "default": ""
+    }
+  }
+}
