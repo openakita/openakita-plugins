@@ -47,9 +47,9 @@
 
 #### 权限级别
 
-- **Basic**（无需审批）：`tools.register`, `log`, `data.own`, `hooks.basic`, `config.read`, `config.write`
-- **Advanced**（需用户授权）：`channel.register`, `memory.write`, `llm.register`, `hooks.message`, `brain.access` 等
-- **System**（需用户授权）：`memory.replace`, `settings.write`, `routes.register`
+- **Basic**（无需审批）：`tools.register`, `log`, `data.own`, `hooks.basic`, `config.read`, `config.write`, `skill`
+- **Advanced**（需用户授权）：`channel.register`, `channel.send`, `memory.read`, `memory.write`, `llm.register`, `hooks.message`, `hooks.retrieve`, `retrieval.register`, `search.register`, `routes.register`, `brain.access`, `vector.access`, `settings.read`
+- **System**（需用户授权）：`memory.replace`, `hooks.all`, `system.config.write`
 
 #### 质量要求
 

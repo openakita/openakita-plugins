@@ -81,6 +81,9 @@ Declares dependencies. The host checks version compatibility before loading.
 {
   "requires": {
     "openakita": ">=1.5.0",
+    "plugin_api": "~1",
+    "sdk": ">=0.1.0",
+    "python": ">=3.11",
     "pip": ["qdrant-client>=1.7.0", "httpx"],
     "npm": [],
     "system": []
@@ -88,12 +91,15 @@ Declares dependencies. The host checks version compatibility before loading.
 }
 ```
 
-| 字段 / Field | 说明 / Description |
-|-------------|-------------------|
-| `openakita` | 最低 OpenAkita 版本 / Minimum OpenAkita version |
-| `pip` | Python 包依赖 / Python package dependencies |
-| `npm` | Node.js 包依赖（MCP 类型用）/ Node.js dependencies (for MCP type) |
-| `system` | 系统级依赖 / System-level dependencies |
+| 字段 / Field | 运行时校验 / Validated | 说明 / Description |
+|-------------|:---:|-------------------|
+| `openakita` | 是 (error) | 最低 OpenAkita 版本，格式 `>=X.Y.Z` / Minimum OpenAkita version |
+| `plugin_api` | 是 (error) | 兼容的 API 主版本，格式 `~N` 或 `>=X.Y.Z` / Compatible API major version |
+| `sdk` | 是 (warn) | 最低 SDK 版本（仅警告）/ Minimum SDK version (warn only) |
+| `python` | 是 (error) | 最低 Python 版本，格式 `>=3.11` / Minimum Python version |
+| `pip` | 否 (stored) | Python 包依赖 / Python package dependencies |
+| `npm` | 否 (stored) | Node.js 包依赖（MCP 类型用）/ Node.js dependencies (for MCP type) |
+| `system` | 否 (stored) | 系统级依赖 / System-level dependencies |
 
 ---
 

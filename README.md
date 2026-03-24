@@ -33,6 +33,8 @@ pip install openakita-plugin-sdk
 | [translate-skill](plugins/translate-skill/) | 🎯 技能 | 翻译技能包 |
 | [github-mcp](plugins/github-mcp/) | 🔌 MCP | GitHub MCP 服务封装 |
 | [whatsapp-channel](plugins/whatsapp-channel/) | 📡 通道 | WhatsApp IM 接入 |
+| [qdrant-memory](plugins/qdrant-memory/) | 🧠 记忆 | Qdrant 向量记忆后端 |
+| [ollama-provider](plugins/ollama-provider/) | 🤖 LLM | Ollama 本地大模型接入 |
 
 ### 插件类别
 
@@ -42,10 +44,10 @@ OpenAkita 支持 **8 种插件类别**：
 |------|------|---------|
 | Tool | 注册自定义工具 | Basic |
 | Channel | 添加 IM 通道适配器 | Advanced |
-| Memory | 替换记忆后端 | Advanced |
+| Memory | 替换/扩展记忆后端 | Advanced / System |
 | LLM | 添加 LLM 提供商 | Advanced |
 | Knowledge/RAG | 接入知识源 | Advanced |
-| Hook | 拦截生命周期事件 | Basic/Advanced |
+| Hook | 拦截生命周期事件 | Basic / Advanced |
 | Skill | 捆绑 SKILL.md 技能文件 | Basic |
 | MCP | 封装 MCP 服务 | Basic |
 
@@ -99,6 +101,8 @@ pip install openakita-plugin-sdk
 | [translate-skill](plugins/translate-skill/) | 🎯 Skill | Translation skill pack |
 | [github-mcp](plugins/github-mcp/) | 🔌 MCP | GitHub MCP server wrapper |
 | [whatsapp-channel](plugins/whatsapp-channel/) | 📡 Channel | WhatsApp IM integration |
+| [qdrant-memory](plugins/qdrant-memory/) | 🧠 Memory | Qdrant vector memory backend |
+| [ollama-provider](plugins/ollama-provider/) | 🤖 LLM | Ollama local LLM provider |
 
 ### Plugin Categories
 
@@ -108,10 +112,10 @@ OpenAkita supports **8 plugin categories**:
 |----------|-------------|-----------------|
 | Tool | Register custom tools | Basic |
 | Channel | Add IM channel adapters | Advanced |
-| Memory | Replace memory backends | Advanced |
+| Memory | Replace / extend memory backends | Advanced / System |
 | LLM | Add LLM providers | Advanced |
 | Knowledge/RAG | Connect knowledge sources | Advanced |
-| Hook | Intercept lifecycle events | Basic/Advanced |
+| Hook | Intercept lifecycle events | Basic / Advanced |
 | Skill | Bundle SKILL.md files | Basic |
 | MCP | Wrap MCP servers | Basic |
 

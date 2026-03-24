@@ -8,9 +8,9 @@
 from openakita_plugin_sdk import PluginAPI
 ```
 
-方法按**权限级别**分组。未声明权限的调用会被宿主拒绝并抛出 `PluginPermissionError`。
+方法按**权限级别**分组。未声明权限的调用会被宿主**静默跳过**（记录 warning 日志，注册类方法不执行注册，`get_*` 类方法返回 `None`），插件继续运行。
 
-Methods are grouped by **permission tier**. Calls without the required permission raise `PluginPermissionError`.
+Methods are grouped by **permission tier**. Calls without the required permission are **silently skipped** (warning logged, register methods do nothing, `get_*` methods return `None`), and the plugin continues running.
 
 ---
 
@@ -119,8 +119,8 @@ from openakita_plugin_sdk.channel import ChannelAdapter
 class WhatsAppAdapter(ChannelAdapter):
     async def start(self) -> None: ...
     async def stop(self) -> None: ...
-    async def send_message(self, message) -> None: ...
-    async def send_text(self, chat_id: str, text: str, **kwargs) -> None: ...
+    async def send_message(self, message) -> str: ...
+    async def send_text(self, chat_id: str, text: str, **kwargs) -> str: ...
 
 def factory(creds, *, channel_name, bot_id, agent_profile_id):
     return WhatsAppAdapter(creds)
@@ -197,6 +197,41 @@ api.register_hook("on_message_received", on_message_received)
 
 详见 [hooks.md](hooks.md)。See [hooks.md](hooks.md) for full hook reference.
 
+### LLM 提供商注册 / LLM Provider Registration
+
+双重注册机制：协议类 + 厂商目录。
+
+Dual registration: protocol class + vendor catalog.
+
+```python
+from openakita_plugin_sdk.llm import LLMProvider, ProviderRegistry, ProviderRegistryInfo
+
+class OllamaProvider(LLMProvider):
+    def __init__(self, config) -> None:
+        self.base_url = config.base_url
+
+    async def chat(self, messages: list[dict], **kwargs):
+        ...
+
+    async def chat_stream(self, messages: list[dict], **kwargs):
+        ...
+
+class OllamaRegistry(ProviderRegistry):
+    def list_models(self) -> list[dict]:
+        return [{"id": "llama3", "name": "Llama 3"}]
+
+api.register_llm_provider("ollama_native", OllamaProvider)
+api.register_llm_registry("ollama", OllamaRegistry(ProviderRegistryInfo(
+    slug="ollama",
+    name="Ollama",
+    api_type="ollama_native",
+    default_base_url="http://localhost:11434",
+    api_key_env="OLLAMA_API_KEY",
+)))
+```
+
+权限 / Permission: `llm.register`
+
 ### 宿主服务访问 / Host Service Access
 
 ```python
@@ -218,46 +253,6 @@ settings = api.get_settings()        # 权限 / perm: settings.read
 
 Requires explicit manual approval; typically for built-in or highly trusted plugins.
 
-### LLM 提供商注册 / LLM Provider Registration
-
-双重注册机制：协议类 + 厂商目录。
-
-Dual registration: protocol class + vendor catalog.
-
-```python
-from openakita_plugin_sdk.llm import LLMProvider, ProviderRegistry, ProviderRegistryInfo
-
-class OllamaProvider(LLMProvider):
-    def __init__(self, config) -> None:
-        self.base_url = config.base_url
-
-    async def chat(self, messages: list[dict], **kwargs):
-        # 实际 API 调用 / actual API call
-        ...
-
-    async def chat_stream(self, messages: list[dict], **kwargs):
-        # 流式调用 / streaming call
-        ...
-
-class OllamaRegistry(ProviderRegistry):
-    def list_models(self) -> list[dict]:
-        return [{"id": "llama3", "name": "Llama 3"}]
-
-# 注册协议实现 / Register protocol implementation
-api.register_llm_provider("ollama_native", OllamaProvider)
-
-# 注册厂商目录 / Register vendor catalog
-api.register_llm_registry("ollama", OllamaRegistry(ProviderRegistryInfo(
-    slug="ollama",
-    name="Ollama",
-    api_type="ollama_native",
-    default_base_url="http://localhost:11434",
-    api_key_env="OLLAMA_API_KEY",
-)))
-```
-
-权限 / Permission: `llm.register`
-
 ### 记忆后端替换 / Memory Backend Replacement
 
 ```python
@@ -273,7 +268,7 @@ With `memory.replace` permission, the plugin's memory backend **replaces** the b
 ### 全钩子访问 / Full Hook Access
 
 ```python
-api.register_hook("on_schedule", scheduled_task)  # hooks.all 权限
+api.register_hook("on_schedule", scheduled_task)  # hooks.basic 权限
 ```
 
 权限 / Permission: `hooks.all`
