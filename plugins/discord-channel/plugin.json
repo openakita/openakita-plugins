@@ -1,0 +1,28 @@
+{
+  "id": "discord-channel",
+  "name": "Discord",
+  "version": "1.0.0",
+  "description": "Discord IM channel adapter — connect OpenAkita to Discord servers and DMs via the official Bot API",
+  "author": "OpenAkita Team",
+  "license": "MIT",
+  "type": "python",
+  "entry": "plugin.py",
+  "permissions": [
+    "channel.register",
+    "hooks.basic",
+    "config.read",
+    "config.write",
+    "log"
+  ],
+  "requires": {
+    "openakita": ">=1.27.0",
+    "plugin_api": "~1",
+    "python": ">=3.11",
+    "pip": ["discord.py>=2.3.0"]
+  },
+  "provides": {
+    "channels": ["discord"]
+  },
+  "category": "channel",
+  "tags": ["im", "discord", "messaging", "bot", "guild", "community"]
+}

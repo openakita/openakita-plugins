@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Discord Channel Settings",
+  "description": "Configuration for the Discord channel plugin",
+  "type": "object",
+  "properties": {
+    "bot_token": {
+      "type": "string",
+      "description": "Discord Bot Token (from Discord Developer Portal)",
+      "x-env": "DISCORD_BOT_TOKEN",
+      "x-secret": true
+    },
+    "application_id": {
+      "type": "string",
+      "description": "Discord Application ID (for slash commands)",
+      "x-env": "DISCORD_APPLICATION_ID"
+    },
+    "allowed_guild_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Guild (server) IDs the bot should respond in. Empty = all guilds.",
+      "default": []
+    },
+    "allowed_channel_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Channel IDs the bot should listen to. Empty = all channels in allowed guilds.",
+      "default": []
+    },
+    "respond_to_dms": {
+      "type": "boolean",
+      "description": "Whether the bot should respond to direct messages",
+      "default": true
+    },
+    "respond_to_mentions_only": {
+      "type": "boolean",
+      "description": "In guild channels, only respond when @mentioned (recommended for busy servers)",
+      "default": true
+    },
+    "command_prefix": {
+      "type": "string",
+      "description": "Legacy command prefix (e.g. '!' or '/'). Leave empty to disable prefix commands.",
+      "default": ""
+    },
+    "streaming_throttle_ms": {
+      "type": "integer",
+      "description": "Minimum interval (ms) between edit-in-place streaming updates",
+      "default": 1500,
+      "minimum": 500,
+      "maximum": 10000
+    },
+    "max_message_length": {
+      "type": "integer",
+      "description": "Max characters per Discord message (Discord limit is 2000)",
+      "default": 2000,
+      "maximum": 2000
+    },
+    "status_message": {
+      "type": "string",
+      "description": "Custom status / activity message for the bot",
+      "default": "Powered by OpenAkita"
+    }
+  },
+  "required": ["bot_token"]
+}
