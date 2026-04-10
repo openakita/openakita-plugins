@@ -107,6 +107,7 @@ def test_my_plugin():
 | [Hooks](hooks.md) | All 10 lifecycle hooks with callback signatures |
 | [Protocols](protocols.md) | Memory, Retrieval, Search interfaces |
 | [plugin.json](plugin-json.md) | Manifest schema reference |
+| [**REST API**](rest-api.md) | 🆕 Plugin management HTTP endpoints |
 | [Testing](testing.md) | MockPluginAPI and test patterns |
 | [Cross-Ecosystem](cross-ecosystem.md) | Compatibility with Claude/Cursor/Codex |
 

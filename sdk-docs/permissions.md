@@ -27,7 +27,7 @@ OpenAkita plugins use a **three-tier permission model** to control access to sys
 | `config.write` | `set_config()` | 低 / Low — 写入本插件配置 |
 | `data.own` | `get_data_dir()` | 低 / Low — 本插件数据目录 |
 | `tools.register` | `register_tools()` | 中 / Medium — 新工具影响 AI 行为 |
-| `hooks.basic` | `register_hook("on_init" / "on_shutdown" / "on_schedule")` | 低 / Low — 生命周期钩子 |
+| `hooks.basic` | `register_hook("on_init" / "on_shutdown" / "on_schedule" / "on_config_change" / "on_error")` | 低 / Low — 生命周期钩子 |
 | `skill` | (declarative) | 低 / Low — 声明插件提供技能文件 |
 
 ### Advanced 级
@@ -49,14 +49,14 @@ Risk prompts are shown to users during installation.
 | `retrieval.register` | `register_retrieval_source()` | "此插件将添加知识检索来源 / This plugin will add a retrieval source" |
 | `routes.register` | `register_api_routes()` | "此插件将添加网络接口 / This plugin will add HTTP endpoints" |
 | `hooks.message` | `on_message_received`, `on_message_sending`, `on_session_start`, `on_session_end` | "此插件可以拦截和观察消息 / This plugin can intercept and observe messages" |
-| `hooks.retrieve` | `on_retrieve`, `on_tool_result`, `on_prompt_build` | "此插件可以向 AI 注入上下文 / This plugin can inject context into AI prompts" |
+| `hooks.retrieve` | `on_retrieve`, `on_tool_result`, `on_prompt_build`, `on_before_tool_use`, `on_after_tool_use` | "此插件可以向 AI 注入上下文 / This plugin can inject context into AI prompts" |
 | `llm.register` | `register_llm_provider()`, `register_llm_registry()` | "此插件将注册新的 LLM 提供商 / This plugin will register a new LLM provider" |
 
 ### System 级
 
 | 权限 ID / Permission | API 方法 / API Method | 说明 / Description |
 |---------------------|----------------------|-------------------|
-| `hooks.all` | 所有 10 个钩子 / all 10 hooks | 完整钩子访问权 / Full hook access |
+| `hooks.all` | 所有 14 个钩子 / all 14 hooks | 完整钩子访问权 / Full hook access |
 | `memory.replace` | `register_memory_backend()` 替换模式 / replace mode | 替换内置记忆系统 / Replace built-in memory |
 | `system.config.write` | — | 写入全局系统配置 / Write global system config |
 

@@ -29,12 +29,18 @@ Every plugin directory must contain a `plugin.json` manifest file. The host scan
 | `provides` | `object` | `{}` | 能力声明 / Provided capabilities |
 | `replaces` | `string[]` | `[]` | 替换的内置模块 / Built-in modules this replaces |
 | `conflicts` | `string[]` | `[]` | 冲突的插件 ID / Conflicting plugin IDs |
+| `depends` | `string[]` | `[]` | 依赖的插件 ID（影响加载顺序）/ Plugin IDs this depends on (affects load order) |
 | `category` | `string` | `""` | 市场分类 / Marketplace category |
 | `tags` | `string[]` | `[]` | 搜索标签 / Search tags |
 | `icon` | `string` | `""` | 图标名称 (Tabler Icons) / Icon name |
+| `display_name_zh` | `string` | `""` | 中文显示名 / Chinese display name |
+| `display_name_en` | `string` | `""` | 英文显示名 / English display name |
+| `description_i18n` | `object` | `{}` | 多语言描述 `{"zh": "...", "en": "..."}` / i18n descriptions |
+| `review_status` | `string` | `"unreviewed"` | 审核状态 / Review status (internal use) |
 | `load_timeout` | `number` | `10` | `on_load()` 最大秒数 / Max seconds for `on_load()` |
 | `hook_timeout` | `number` | `5` | 每个钩子回调最大秒数 / Max seconds per hook callback |
 | `retrieve_timeout` | `number` | `3` | 检索源调用最大秒数 / Max seconds for retrieval calls |
+| `ui` | `object` | `null` | UI 插件配置 (Plugin 2.0)，详见 [plugin-ui.md](plugin-ui.md) / UI config for full-stack plugins |
 
 ## 默认入口文件 / Default Entry Points
 
@@ -242,16 +248,44 @@ Declares dependencies. The host checks version compatibility before loading.
 
 ---
 
+## `depends` 与加载顺序 / `depends` and Load Order
+
+宿主按 `depends` 字段进行**拓扑排序**（Kahn 算法）决定加载顺序。依赖关系不满足时插件会被跳过。
+
+The host performs a **topological sort** (Kahn's algorithm) on `depends` to determine load order. Plugins with unmet dependencies are skipped.
+
+```json
+{
+  "id": "my-dashboard",
+  "depends": ["data-connector", "chart-engine"],
+  "..."
+}
+```
+
+**规则 / Rules:**
+- 被依赖的插件先加载 / Dependencies load first
+- 循环依赖会导致所有环上的插件被跳过 / Circular dependencies cause all plugins in the cycle to be skipped
+- 缺失依赖的插件被跳过并记录错误 / Missing dependencies cause skip with error log
+
+---
+
 ## 校验 / Validation
 
 宿主在加载时会校验清单文件：
 
 The host validates the manifest at load time:
 
-- 缺少必需字段 → 跳过并记录错误 / Missing required fields → skip with error
+- 缺少必需字段（`id`, `name`, `version`, `type`）→ 跳过并记录错误 / Missing required fields → skip with error
 - `type` 不是 `python`/`mcp`/`skill` → 跳过 / Invalid `type` → skip
 - `requires.openakita` 版本不兼容 → 跳过 / Incompatible version → skip
+- `requires.plugin_api` 主版本不匹配 → 跳过 / API major version mismatch → skip
+- `requires.plugin_ui_api` 不匹配 → 仅警告（UI 仍会尝试加载）/ UI API mismatch → warning only
+- `requires.python` 版本不满足 → 跳过 / Python version mismatch → skip
 - `conflicts` 中的插件已加载 → 跳过 / Conflicting plugin loaded → skip
+- `depends` 中的插件未加载 → 跳过 / Missing dependency → skip
+- 循环 `depends` → 环上所有插件被跳过 / Circular depends → all in cycle skipped
+- 未知的 `permissions` 字符串 → 过滤并记录警告 / Unknown permission strings → filtered with warning
+- `entry` 路径含 `..` 或绝对路径 → 安全拒绝 / Path traversal in entry → security reject
 
 ---
 

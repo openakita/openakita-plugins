@@ -49,11 +49,16 @@ api.set_config({"api_key": "sk-xxx", "last_sync": "2026-03-22"})
 ### 数据目录 / Data Directory
 
 ```python
-data_dir = api.get_data_dir()  # 返回 pathlib.Path / returns pathlib.Path
-db_path = data_dir / "cache.sqlite"
+data_dir = api.get_data_dir()  # 返回 pathlib.Path 或 None / returns pathlib.Path or None
+if data_dir:
+    db_path = data_dir / "cache.sqlite"
 ```
 
 权限 / Permission: `data.own`
+
+> 权限不足时返回 `None`，不会抛出异常。使用前务必做 `None` 检查。
+>
+> Returns `None` when permission is denied, does not raise. Always check for `None` before use.
 
 ### 工具注册 / Tool Registration
 
@@ -86,8 +91,9 @@ api.register_tools(TOOLS, handler)
 权限 / Permission: `tools.register`
 
 **注意 / Notes:**
-- 工具定义使用 OpenAI 格式（`type: "function"` + `function.name`）
-- Tool definitions use OpenAI format (`type: "function"` + `function.name`)
+- 工具定义支持两种格式 / Two definition formats are supported:
+  - **OpenAI 格式（推荐）**: `{"type": "function", "function": {"name": "...", ...}}`
+  - **顶层 name 格式**: `{"name": "...", "description": "...", "parameters": {...}}`（内部自动转换 / auto-normalized internally）
 - 没有 `name` 字段的定义会被静默跳过 / Definitions without a `name` field are silently skipped
 - `handler` 接收所有工具调用，通过 `tool_name` 分发 / `handler` receives all tool calls, dispatch by `tool_name`
 
@@ -101,7 +107,7 @@ api.register_hook("on_init", on_init)
 api.register_hook("on_shutdown", on_shutdown_fn)
 ```
 
-权限 / Permission: `hooks.basic`（仅限 `on_init`、`on_shutdown`、`on_schedule` / only for these three hooks）
+权限 / Permission: `hooks.basic`（覆盖 `on_init`、`on_shutdown`、`on_schedule`、`on_config_change`、`on_error` / covers these 5 hooks）
 
 ---
 
@@ -241,9 +247,37 @@ vector = api.get_vector_store()      # 权限 / perm: vector.access
 settings = api.get_settings()        # 权限 / perm: settings.read
 ```
 
-> 返回宿主内部对象的引用。请仅使用宿主文档中记录的公开 API，不要访问私有属性。
+> 权限不足时返回 `None`。请先做 `None` 检查再使用。
 >
-> Returns references to host internal objects. Only use publicly documented APIs; do not access private attributes.
+> Returns `None` when permission is denied. Always check for `None` before use.
+
+```python
+brain = api.get_brain()
+if brain:
+    result = await brain.think(prompt="用户问题", system="系统提示词")
+    text = result.content  # Response dataclass, .content 为 str
+```
+
+### Skill Loader 代理 / Skill Loader Proxy
+
+宿主为插件注入了一个受限的 Skill Loader 代理，仅暴露以下方法：
+
+The host injects a scoped Skill Loader proxy with limited methods:
+
+```python
+skill_loader = api.skill_loader
+
+skill_loader.load_skill(path)           # 加载技能文件
+skill_loader.unload_skill(skill_id)     # 卸载技能
+skill_loader.get_tool_definitions()     # 获取工具定义列表
+skill_loader.get_skill(skill_id)        # 获取技能对象
+skill_loader.get_skill_body(skill_id)   # 获取技能原始内容
+skill_loader.loaded_count               # 已加载技能数量 (属性)
+```
+
+> Skill Loader 通过 `host_refs` 注入，无需额外权限声明。
+>
+> Injected via `host_refs`, no additional permission required.
 
 ---
 

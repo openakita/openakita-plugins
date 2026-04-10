@@ -211,7 +211,7 @@ plugins/my-tool/
 |-----------|----------------|
 | [api-reference.md](api-reference.md) | PluginAPI 完整方法参考 / Full method reference |
 | [permissions.md](permissions.md) | 三级权限模型 / Three-tier permission model |
-| [hooks.md](hooks.md) | 10 个生命周期钩子 / 10 lifecycle hooks |
+| [hooks.md](hooks.md) | 14 个生命周期钩子 / 14 lifecycle hooks |
 | [protocols.md](protocols.md) | Memory/Retrieval/Search 接口 / Backend interfaces |
 | [plugin-json.md](plugin-json.md) | 清单文件字段详解 / Manifest field reference |
 | [testing.md](testing.md) | 测试模式和工具 / Test patterns and utilities |

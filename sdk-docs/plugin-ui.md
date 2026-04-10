@@ -115,12 +115,21 @@ interface BridgeMessage {
 Plugin iframe                           Host (PluginBridgeHost)
      |                                       |
      |--- bridge:ready ---------------------->|
-     |<-- bridge:init (theme,locale,apiBase) -|
+     |<-- bridge:init (theme,locale,         -|
+     |       apiBase,pluginId)                |
      |--- bridge:handshake ------------------>|
-     |<-- bridge:handshake-ack (caps) --------|
+     |<-- bridge:handshake-ack              --|
+     |       (hostVersion,capabilities,       |
+     |        bridgeVersion)                  |
      |                                       |
-     |   ✅ Bridge connected, ready to use    |
+     |   Bridge connected, ready to use       |
 ```
+
+**握手细节 / Handshake details:**
+- `bridge:init` payload: `{ theme: string, locale: string, apiBase: string, pluginId: string }`
+- `bridge:handshake-ack` payload: `{ hostVersion: "1.0.0", capabilities: string[], bridgeVersion: 1 }`
+- 宿主将 `bridge:ready` **或** `bridge:handshake` 视为已连接 / Host treats either `bridge:ready` or `bridge:handshake` as connected
+- 30 秒内未收到握手信号，宿主显示加载超时错误，提供重试按钮 / 30s timeout with retry button on failure
 
 ### 请求-响应消息 / Request-Response Messages
 
@@ -138,9 +147,15 @@ Plugin iframe                           Host (PluginBridgeHost)
 |-----------------|--------|-----------|
 | Plugin → Host | `bridge:notification` | `{ title, body, type? }` |
 | Plugin → Host | `bridge:navigate` | `{ viewId }` |
+| Host → Plugin | `bridge:init` | `{ theme, locale, apiBase, pluginId }` |
 | Host → Plugin | `bridge:theme-change` | `{ theme }` |
 | Host → Plugin | `bridge:locale-change` | `{ locale }` |
 | Host → Plugin | `bridge:event` | `{ eventType, data }` |
+| Host → Plugin | `bridge:unsupported` | `{ originalType }` |
+
+> 当宿主收到未识别的消息类型时，返回 `bridge:unsupported` 并携带原始类型名。
+>
+> When the host receives an unknown message type, it responds with `bridge:unsupported` carrying the original type name.
 
 ### 宿主能力清单 / Host Capabilities
 
