@@ -38,7 +38,7 @@ pip install openakita-plugin-sdk
 
 ### 插件类别
 
-OpenAkita 支持 **8 种插件类别**：
+OpenAkita 支持 **9 种插件类别**：
 
 | 类别 | 说明 | 权限级别 |
 |------|------|---------|
@@ -50,6 +50,7 @@ OpenAkita 支持 **8 种插件类别**：
 | Hook | 拦截生命周期事件 | Basic / Advanced |
 | Skill | 捆绑 SKILL.md 技能文件 | Basic |
 | MCP | 封装 MCP 服务 | Basic |
+| **Full-Stack UI** | 带独立前端页面的全栈插件 (Plugin 2.0) | Advanced |
 
 ### 开发你自己的插件
 
@@ -106,7 +107,7 @@ pip install openakita-plugin-sdk
 
 ### Plugin Categories
 
-OpenAkita supports **8 plugin categories**:
+OpenAkita supports **9 plugin categories**:
 
 | Category | Description | Permission Level |
 |----------|-------------|-----------------|
@@ -118,6 +119,7 @@ OpenAkita supports **8 plugin categories**:
 | Hook | Intercept lifecycle events | Basic / Advanced |
 | Skill | Bundle SKILL.md files | Basic |
 | MCP | Wrap MCP servers | Basic |
+| **Full-Stack UI** | Plugin with dedicated frontend page (Plugin 2.0) | Advanced |
 
 ### Develop Your Own Plugin
 

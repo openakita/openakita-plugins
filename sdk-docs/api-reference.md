@@ -275,6 +275,56 @@ api.register_hook("on_schedule", scheduled_task)  # hooks.basic 权限
 
 ---
 
+## Plugin 2.0 — UI 插件接口 / UI Plugin APIs
+
+以下方法是 Plugin 2.0 新增的，用于全栈 UI 插件开发。
+
+The following methods are new in Plugin 2.0, for full-stack UI plugin development.
+
+### 文件响应 / File Response
+
+```python
+response = api.create_file_response(
+    source="/path/to/file.mp4",   # 本地路径或远程 URL / local path or remote URL
+    filename="output.mp4",        # 下载文件名 / download filename
+    media_type="video/mp4",       # MIME 类型 / MIME type
+    as_download=True,             # True=下载 False=内联播放 / True=download False=inline
+)
+```
+
+> 返回 FastAPI `FileResponse`（本地文件）或 `StreamingResponse`（远程 URL）。`as_download=True` 时自动处理 `Content-Disposition` 和 RFC 5987 UTF-8 文件名编码。
+>
+> Returns FastAPI `FileResponse` (local) or `StreamingResponse` (remote URL). When `as_download=True`, auto-handles `Content-Disposition` and RFC 5987 UTF-8 filename encoding.
+
+### UI 事件推送 / UI Event Push
+
+```python
+# 从后端推送实时事件到插件前端 / Push real-time events to plugin frontend
+api.broadcast_ui_event("task_updated", {"task_id": "abc", "status": "done"})
+```
+
+### UI 事件监听 / UI Event Handler
+
+```python
+# 注册前端发来的事件处理器 / Register handler for events from frontend
+async def handle_user_action(data):
+    api.log(f"User action: {data}")
+
+api.register_ui_event_handler("user_action", handle_user_action)
+```
+
+### UI API 版本 / UI API Version
+
+```python
+version = api.ui_api_version  # 当前: "1.0.0" / Current: "1.0.0"
+```
+
+详细的前端 SDK 和 Bridge 协议文档见 [plugin-ui.md](plugin-ui.md)。
+
+See [plugin-ui.md](plugin-ui.md) for the full frontend SDK and Bridge protocol documentation.
+
+---
+
 ## 相关类型 / Related Types
 
 | 名称 / Name | 模块 / Module | 用途 / Purpose |

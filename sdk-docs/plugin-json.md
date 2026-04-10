@@ -195,6 +195,51 @@ Declares dependencies. The host checks version compatibility before loading.
 }
 ```
 
+### 全栈 UI 插件 / Full-Stack UI Plugin (Plugin 2.0)
+
+```json
+{
+  "id": "seedance-video",
+  "name": "Seedance Video Generator",
+  "version": "1.0.0",
+  "type": "python",
+  "entry": "plugin.py",
+  "description": "AI 视频生成 / AI video generation powered by Seedance",
+  "permissions": [
+    "tools.register",
+    "routes.register",
+    "hooks.basic",
+    "config.read",
+    "config.write",
+    "data.own",
+    "brain.access"
+  ],
+  "requires": {
+    "openakita": ">=1.27.0",
+    "plugin_api": "~1",
+    "plugin_ui_api": "~1"
+  },
+  "provides": {
+    "tools": ["seedance_create", "seedance_status", "seedance_list"],
+    "routes": true
+  },
+  "ui": {
+    "entry": "ui/dist/index.html",
+    "title": "Seedance 视频生成",
+    "title_i18n": { "en": "Seedance Video", "zh": "Seedance 视频生成" },
+    "sidebar_group": "apps",
+    "permissions": ["upload", "download", "notifications", "theme", "clipboard"]
+  },
+  "category": "creative",
+  "tags": ["video", "ai", "seedance"]
+}
+```
+
+**注意 / Notes:**
+- `requires.plugin_ui_api` 声明 UI API 版本兼容性 / Declares UI API version compatibility
+- `ui.sidebar_group` 目前仅支持 `"apps"` / Currently only `"apps"` is supported
+- 详见 [plugin-ui.md](plugin-ui.md) / See [plugin-ui.md](plugin-ui.md) for details
+
 ---
 
 ## 校验 / Validation
