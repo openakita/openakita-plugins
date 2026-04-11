@@ -41,7 +41,7 @@ Generate a complete plugin directory with one command:
 python -m openakita_plugin_sdk.scaffold --id my-tool --type tool --dir ./plugins
 ```
 
-可选类型 / Available types: `tool`, `channel`, `rag`, `memory`, `llm`, `hook`, `skill`, `mcp`
+可选类型 / Available types: `tool`, `channel`, `rag`, `memory`, `llm`, `hook`, `skill`, `mcp`, `ui`
 
 生成结构 / Generated structure:
 

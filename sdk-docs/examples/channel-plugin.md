@@ -27,7 +27,7 @@ echo-channel/
   "description": "回显所有消息的演示通道 / Demo channel that echoes all messages",
   "type": "python",
   "entry": "plugin.py",
-  "permissions": ["channel.register", "hooks.basic"],
+  "permissions": ["channel.register", "hooks.basic", "hooks.message", "channel.send"],
   "provides": { "channels": ["echo"] },
   "category": "channel",
   "tags": ["demo", "channel"]
