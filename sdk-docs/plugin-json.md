@@ -103,9 +103,18 @@ Declares dependencies. The host checks version compatibility before loading.
 | `plugin_api` | 是 (error) | 兼容的 API 主版本，格式 `~N` 或 `>=X.Y.Z` / Compatible API major version |
 | `sdk` | 是 (warn) | 最低 SDK 版本（仅警告）/ Minimum SDK version (warn only) |
 | `python` | 是 (error) | 最低 Python 版本，格式 `>=3.11` / Minimum Python version |
-| `pip` | 否 (stored) | Python 包依赖 / Python package dependencies |
+| `pip` | 安装时执行 / on install | Python 包依赖，安装时 `pip install --target <plugin>/deps/` / Python deps, installed to `deps/` on install |
 | `npm` | 否 (stored) | Node.js 包依赖（MCP 类型用）/ Node.js dependencies (for MCP type) |
 | `system` | 否 (stored) | 系统级依赖 / System-level dependencies |
+
+> **pip 依赖注意事项 / pip dependency notes:**
+> - 通过安装器安装时，`requires.pip` 会自动执行 `pip install --target <plugin_dir>/deps/`
+> - 手动复制插件到 `data/plugins/` 时**不会**自动安装 pip 依赖，需手动运行
+> - 宿主加载插件时将插件**根目录**加入 `sys.path`，但**不会**自动将 `deps/` 加入。如有第三方依赖，建议在 `on_load()` 中手动处理
+>
+> - When installed via the installer, `requires.pip` runs `pip install --target <plugin_dir>/deps/`
+> - Manual copy to `data/plugins/` does **not** auto-install pip deps
+> - The host adds the plugin **root directory** to `sys.path` but does **not** auto-add `deps/`. Handle third-party imports in `on_load()` if needed
 
 ---
 
@@ -289,7 +298,41 @@ The host validates the manifest at load time:
 
 ---
 
+## `provides` 与 AI 提示词 / `provides` and AI Prompts
+
+`provides` 是声明性对象，主要用于市场展示和依赖检查。**并非**所有 `provides` 中的值都会自动出现在 AI 的系统提示词中。
+
+`provides` is declarative, mainly for marketplace and dependency checking. **Not** all values automatically appear in the AI system prompt.
+
+**实际影响 AI 提示词的方式 / What actually affects the AI prompt:**
+- 通过 `api.register_tools()` 注册的**工具名**会出现在 AI 可调用工具列表中
+- `type: "skill"` 插件的 SKILL.md 内容会注入到提示词中
+- Python 插件 `provides.skill` 指向的 SKILL.md 也会被加载
+- 其他 `provides` 值（如 `channels`、`hooks`）仅用于文档展示
+
+---
+
+## 扩展字段 / Extra Fields
+
+`plugin.json` 的解析使用 `extra: "allow"` 模式，未知字段会被保留。你可以添加自定义元数据字段：
+
+Unknown fields are preserved (`extra: "allow"` mode). You can add custom metadata:
+
+```json
+{
+  "id": "my-plugin",
+  "onboard": { "welcome_message": "Hello!" },
+  "custom_field": "any value"
+}
+```
+
+---
+
 ## 相关文档 / Related
 
-- [getting-started.md](getting-started.md) — 最小 plugin.json 示例 / Minimal manifest example
+- [getting-started.md](getting-started.md) — 最小 plugin.json 示例、不同 type 的要求 / Minimal manifest, type requirements
 - [permissions.md](permissions.md) — 权限字符串完整列表 / Full permission string catalog
+- [rest-api.md](rest-api.md) — 配置管理和安装 API / Config management and installation API
+- [hooks.md](hooks.md) — 钩子与 `provides.hooks` 的关系 / Hooks and `provides.hooks`
+- [plugin-ui.md](plugin-ui.md) — `ui` 字段详解 / UI section details
+- [examples/mcp-plugin.md](examples/mcp-plugin.md) — MCP 插件的 mcp_config.json 格式 / MCP config format

@@ -19,20 +19,23 @@ List all discovered plugins and their states. Also triggers a disk scan to disco
 ```json
 {
   "ok": true,
-  "plugins": [
-    {
-      "id": "hello-tool",
-      "name": "Hello Tool",
-      "version": "1.0.0",
-      "type": "python",
-      "status": "loaded",
-      "enabled": true,
-      "has_ui": false,
-      "description": "...",
-      "permissions": ["tools.register"],
-      "granted_permissions": ["tools.register", "config.read", "..."]
-    }
-  ]
+  "data": {
+    "plugins": [
+      {
+        "id": "hello-tool",
+        "name": "Hello Tool",
+        "version": "1.0.0",
+        "type": "python",
+        "status": "loaded",
+        "enabled": true,
+        "has_ui": false,
+        "description": "...",
+        "permissions": ["tools.register"],
+        "granted_permissions": ["tools.register", "config.read", "..."]
+      }
+    ],
+    "failed": []
+  }
 }
 ```
 
@@ -42,20 +45,17 @@ List all discovered plugins and their states. Also triggers a disk scan to disco
 
 List all plugins with a UI entry. The desktop sidebar uses this to render the "Apps" list.
 
-**响应 / Response:**
+**响应 / Response:** 直接返回数组 / Returns array directly
 
 ```json
-{
-  "ok": true,
-  "apps": [
-    {
-      "plugin_id": "seedance-video",
-      "title": "Seedance 视频生成",
-      "icon": "",
-      "sidebar_group": "apps"
-    }
-  ]
-}
+[
+  {
+    "plugin_id": "seedance-video",
+    "title": "Seedance 视频生成",
+    "icon": "",
+    "sidebar_group": "apps"
+  }
+]
 ```
 
 ### `GET /api/plugins/health`
@@ -69,9 +69,14 @@ Plugin system health check.
 ```json
 {
   "ok": true,
-  "loaded": 5,
-  "failed": 0,
-  "disabled": 1
+  "data": {
+    "status": "healthy",
+    "loaded": 5,
+    "failed": 0,
+    "disabled": 1,
+    "auto_disabled": [],
+    "failed_ids": []
+  }
 }
 ```
 
@@ -90,7 +95,7 @@ Install a plugin from various sources:
 ```json
 {
   "source": "https://github.com/user/my-plugin",
-  "auto_enable": true
+  "background": false
 }
 ```
 
@@ -104,14 +109,20 @@ Install a plugin from various sources:
 | `/local/path/to/plugin/` | 本地目录（含 `plugin.json`）/ Local directory |
 | `bundle-name` | 跨生态包名 / Cross-ecosystem bundle name |
 
+**参数说明 / Parameter notes:**
+- `source`: 安装源（见下表）/ Installation source
+- `background`: 设为 `true` 立即返回 `install_id`，通过 SSE 跟踪进度 / Set `true` to return immediately with `install_id` for SSE progress
+
 **响应 / Response:**
 
 ```json
 {
   "ok": true,
-  "install_id": "uuid",
-  "plugin_id": "my-plugin",
-  "message": "Installation started"
+  "data": {
+    "plugin_id": "my-plugin",
+    "hot_loaded": true,
+    "install_id": "a1b2c3d4e5f6"
+  }
 }
 ```
 
@@ -124,8 +135,8 @@ SSE stream for real-time installation progress.
 **事件格式 / Event format:**
 
 ```
-data: {"stage": "downloading", "progress": 0.5, "message": "Cloning repository..."}
-data: {"stage": "complete", "progress": 1.0, "plugin_id": "my-plugin"}
+data: {"stage": "downloading", "percent": 50, "message": "Cloning repository...", "finished": false, "error": ""}
+data: {"stage": "done", "percent": 100, "message": "安装完成", "finished": true, "error": ""}
 ```
 
 ### `DELETE /api/plugins/{plugin_id}`
@@ -192,9 +203,9 @@ Update plugin config (merge update, not overwrite).
 
 **JSON Schema 校验 / JSON Schema Validation:**
 
-如果插件目录中存在 `config_schema.json`，配置更新时会用 `jsonschema` 校验。校验失败返回 `422`。
+如果插件目录中存在 `config_schema.json`，配置更新后（合并到已有配置上）会用 `jsonschema` 校验。校验失败返回 `400`。若宿主未安装 `jsonschema` 包，校验静默跳过。
 
-If a `config_schema.json` exists in the plugin directory, config updates are validated against it. Validation failure returns `422`.
+If a `config_schema.json` exists, the merged config is validated with `jsonschema`. Validation failure returns `400`. If `jsonschema` is not installed on the host, validation is silently skipped.
 
 **配置变更钩子 / Config Change Hook:**
 
@@ -271,9 +282,9 @@ Get the plugin's icon file.
 
 ### `GET /api/plugins/{plugin_id}/logs`
 
-获取插件最近的日志输出（最后 200 行）。
+获取插件最近的日志输出（默认最后 100 行，可通过 `?lines=N` 调整）。
 
-Get the plugin's recent log output (last 200 lines).
+Get the plugin's recent log output (default: last 100 lines, adjustable via `?lines=N`).
 
 ### `GET /api/plugins/{plugin_id}/export`
 
@@ -337,16 +348,44 @@ All errors use a consistent format:
 
 **错误码 / Error Codes:**
 
-| 错误码 / Code | HTTP 状态 / Status | 说明 / Description |
-|---------------|--------------------|-------------------|
-| `PLUGIN_NOT_FOUND` | 404 | 插件不存在 / Plugin not found |
-| `PLUGIN_ALREADY_EXISTS` | 409 | 插件已安装 / Plugin already installed |
-| `PLUGIN_LOAD_FAILED` | 500 | 加载失败 / Load failed |
-| `PLUGIN_DISABLED` | 409 | 插件已禁用 / Plugin is disabled |
-| `MANIFEST_INVALID` | 422 | 清单文件格式错误 / Invalid manifest |
-| `PERMISSION_DENIED` | 403 | 权限不足 / Insufficient permissions |
-| `INSTALL_FAILED` | 500 | 安装失败 / Installation failed |
-| `CONFIG_VALIDATION_FAILED` | 422 | 配置校验失败 / Config validation failed |
+| 错误码 / Code | 说明 / Description |
+|---------------|-------------------|
+| `NOT_FOUND` | 插件不存在 / Plugin not found |
+| `ALREADY_EXISTS` | 插件已安装 / Plugin already installed |
+| `LOAD_FAILED` | 加载失败 / Load failed |
+| `RELOAD_FAILED` | 重载失败 / Reload failed |
+| `UNLOAD_FAILED` | 卸载失败 / Unload failed |
+| `INVALID_MANIFEST` | 清单文件格式错误 / Invalid manifest |
+| `MANIFEST_NOT_FOUND` | 未找到 plugin.json / No plugin.json found |
+| `PERMISSION_DENIED` | 权限不足 / Insufficient permissions |
+| `INSTALL_FAILED` | 安装失败 / Installation failed |
+| `UNINSTALL_FAILED` | 卸载失败 / Uninstall failed |
+| `CONFIG_INVALID` | 配置校验失败 / Config validation failed |
+| `INVALID_ID` | 无效的插件 ID / Invalid plugin ID |
+| `NETWORK_ERROR` | 网络错误 / Network error |
+| `ZIP_BOMB` | 压缩包异常 / Suspicious archive |
+| `ZIP_INVALID` | 非有效 ZIP / Invalid zip file |
+| `TIMEOUT` | 操作超时 / Operation timed out |
+| `DEPENDENCY_MISSING` | 缺少依赖 / Missing dependency |
+| `COMPATIBILITY_ERROR` | 版本不兼容 / Version incompatible |
+| `MANAGER_UNAVAILABLE` | 管理器不可用 / Manager not available |
+| `INTERNAL_ERROR` | 内部错误 / Internal error |
+
+每个错误响应包含中英双语的用户提示和恢复指导：
+
+Each error response includes bilingual user messages and recovery guidance:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "未找到该插件",
+    "guidance": "请确认插件 ID 是否正确",
+    "detail": "Plugin 'my-plugin' not found in data/plugins/"
+  }
+}
+```
 
 ---
 
@@ -381,3 +420,5 @@ For example, the Seedance plugin registers `/tasks`, accessible at `GET /api/plu
 - [permissions.md](permissions.md) — 权限模型 / Permission model
 - [plugin-json.md](plugin-json.md) — 清单文件格式 / Manifest format
 - [plugin-ui.md](plugin-ui.md) — UI 插件开发 / UI plugin development
+- [getting-started.md](getting-started.md) — 插件默认目录和开发入门 / Default dirs and getting started
+- [hooks.md](hooks.md) — 生命周期钩子 / Lifecycle hooks

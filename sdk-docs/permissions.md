@@ -142,3 +142,5 @@ api.send_message("test", "chat1", "hello")
 - [api-reference.md](api-reference.md) — 每个方法对应的权限 / Permission for each method
 - [hooks.md](hooks.md) — 每个钩子对应的权限 / Permission for each hook
 - [plugin-json.md](plugin-json.md) — `permissions` 字段格式 / permissions field format
+- [rest-api.md](rest-api.md) — 权限批准/撤销 API / Permission approve/revoke API
+- [getting-started.md](getting-started.md) — 声明权限的最佳实践 / Best practices for declaring permissions

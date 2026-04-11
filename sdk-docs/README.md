@@ -128,12 +128,22 @@ def test_my_plugin():
 | [API Reference](api-reference.md) | All `PluginAPI` methods and signatures |
 | [**UI Plugin Guide**](plugin-ui.md) | 🆕 Full-stack UI plugin development (Plugin 2.0) |
 | [Permissions](permissions.md) | Three-tier permission model |
-| [Hooks](hooks.md) | All 10 lifecycle hooks with callback signatures |
+| [Hooks](hooks.md) | All 14 lifecycle hooks with callback signatures |
 | [Protocols](protocols.md) | Memory, Retrieval, Search interfaces |
 | [plugin.json](plugin-json.md) | Manifest schema reference |
-| [**REST API**](rest-api.md) | 🆕 Plugin management HTTP endpoints |
+| [**REST API**](rest-api.md) | Plugin management HTTP endpoints |
 | [Testing](testing.md) | MockPluginAPI and test patterns |
 | [Cross-Ecosystem](cross-ecosystem.md) | Compatibility with Claude/Cursor/Codex |
+| **Examples** | |
+| [Tool Plugin](examples/tool-plugin.md) | Register AI-callable tools |
+| [Channel Plugin](examples/channel-plugin.md) | Add IM channel adapters |
+| [MCP Plugin](examples/mcp-plugin.md) | Wrap MCP server (JSON only) |
+| [Skill Plugin](examples/skill-plugin.md) | Inject prompt guidance (no code) |
+| [UI Plugin](examples/ui-plugin.md) | Full-stack UI with Bridge SDK |
+| [Hook Plugin](examples/hook-plugin.md) | React to lifecycle events |
+| [Memory Plugin](examples/memory-plugin.md) | Custom memory backend |
+| [LLM Plugin](examples/llm-plugin.md) | Custom LLM provider |
+| [RAG Plugin](examples/rag-plugin.md) | Custom retrieval source |
 
 ## SDK Modules
 
