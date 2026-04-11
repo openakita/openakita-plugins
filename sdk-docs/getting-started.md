@@ -210,6 +210,8 @@ plugins/my-tool/
 | 文档 / Doc | 内容 / Content |
 |-----------|----------------|
 | [api-reference.md](api-reference.md) | PluginAPI 完整方法参考 / Full method reference |
+| [**plugin-ui.md**](plugin-ui.md) | **全栈 UI 插件开发 / Full-stack UI plugin development (Plugin 2.0)** |
+| [rest-api.md](rest-api.md) | 管理 REST API / Plugin management REST API |
 | [permissions.md](permissions.md) | 三级权限模型 / Three-tier permission model |
 | [hooks.md](hooks.md) | 14 个生命周期钩子 / 14 lifecycle hooks |
 | [protocols.md](protocols.md) | Memory/Retrieval/Search 接口 / Backend interfaces |

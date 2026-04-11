@@ -85,6 +85,30 @@ class Plugin(PluginBase):
 | **MCP** | Wrap an MCP server as a managed plugin | JSON config only |
 | **Full-Stack UI** 🆕 | Plugin with dedicated frontend page | `api.register_api_routes()` + Bridge SDK |
 
+### Full-Stack UI Plugin (Quick Start)
+
+```bash
+# Create a plugin with frontend UI
+my-ui-plugin/
+├── plugin.json          # Add "ui" section (see plugin-ui.md)
+├── plugin.py            # Backend: register routes + tools
+└── ui/dist/index.html   # Frontend: inline Bridge SDK + your app
+```
+
+```json
+// plugin.json — key addition
+{
+  "ui": {
+    "entry": "ui/dist/index.html",
+    "title": "My App",
+    "sidebar_group": "apps"
+  },
+  "requires": { "plugin_ui_api": "~1" }
+}
+```
+
+See [UI Plugin Guide](plugin-ui.md) for the full Bridge SDK template and protocol reference.
+
 ## Testing
 
 ```python

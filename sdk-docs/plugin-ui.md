@@ -208,6 +208,27 @@ const folder = await pickFolder("选择输出目录");
 // folder = "/Users/.../output" 或 null (取消)
 ```
 
+### 文件上传 / File Upload
+
+```javascript
+// 上传文件到插件后端 (直接 POST FormData，不经 Bridge)
+// Upload file to plugin backend (direct POST FormData, not via Bridge)
+async function uploadFile(file) {
+  var base = _ctx ? _ctx.apiBase : _detectApiBase();
+  var prefix = _ctx ? "/api/plugins/" + _ctx.pluginId : "/api/plugins/YOUR_PLUGIN_ID";
+  var formData = new FormData();
+  formData.append("file", file);
+  var resp = await fetch(base + prefix + "/upload", {
+    method: "POST", body: formData
+  });
+  return resp.json();
+}
+```
+
+> 文件上传使用直连 POST（不经 Bridge 代理），因为 postMessage 无法传递 `File` 对象。后端需要自己实现 `/upload` 路由。
+>
+> File uploads use direct POST (not via Bridge) because `postMessage` cannot transfer `File` objects. The backend must implement its own `/upload` route.
+
 ### 剪贴板 / Clipboard
 
 ```javascript
@@ -376,6 +397,74 @@ window.__bridge = {
 
 ---
 
+## UI 静态资源服务 / UI Static File Serving
+
+宿主在加载插件时，自动将 `ui.entry` 所在目录挂载为静态文件服务：
+
+The host automatically mounts the directory containing `ui.entry` as a static file server:
+
+```
+URL:  /api/plugins/<plugin_id>/ui/
+目录: <plugin_dir>/ui/dist/     (entry 的父目录)
+```
+
+**技术细节 / Technical details:**
+- 使用 FastAPI `StaticFiles` 挂载，`html=True`（SPA 路由支持）
+- 响应头强制 `Cache-Control: no-cache, no-store, must-revalidate`，确保开发期间不缓存
+- 如果 `api_app` 尚未就绪（启动顺序问题），挂载会延迟到 app 就绪后自动执行
+- iframe 加载 URL 自动附加 `?_v={timestamp}` 防止缓存
+
+---
+
+## `_ctx` 上下文对象 / Context Object
+
+握手成功后，SDK 模板中的 `_ctx` 保存宿主传入的上下文信息：
+
+After handshake, the `_ctx` object in the SDK template holds host context:
+
+```javascript
+var ctx = window.__bridge.getCtx();
+// ctx = {
+//   theme: "light",          // 当前主题 / Current theme
+//   locale: "zh",            // 当前语言 / Current locale
+//   apiBase: "http://127.0.0.1:21110",  // API 基地址 / API base URL
+//   pluginId: "seedance-video"          // 插件 ID / Plugin ID
+// }
+```
+
+> `pluginApi()` 函数自动使用 `_ctx.pluginId` 构建 URL 前缀，无需手动拼接。
+>
+> `pluginApi()` automatically uses `_ctx.pluginId` to build URL prefixes; no manual concatenation needed.
+
+---
+
+## 开发模式 / Development Mode
+
+### 方式一：纯 HTML（适合简单插件）
+
+直接编写单文件 `index.html`（含内联 JS/CSS/React），无需构建工具。SDK 模板可直接嵌入。
+
+Single-file `index.html` with inline JS/CSS/React (no build tools). Embed the SDK template directly.
+
+### 方式二：Vite/Webpack（适合复杂插件）
+
+使用前端构建工具开发，产物输出到 `ui/dist/`。
+
+Use frontend build tools, output to `ui/dist/`.
+
+```bash
+cd my-plugin/ui
+npm create vite@latest . -- --template react-ts
+npm run build   # 输出到 dist/
+```
+
+**热开发提示 / Hot Dev Tips:**
+- 宿主会在每次 iframe 加载时附加 `?_v=timestamp` 防止缓存
+- 修改 `index.html` 后，在桌面端侧边栏重新点击插件入口即可刷新
+- 后端路由修改后需重启宿主（或使用 `POST /api/plugins/{id}/reload`）
+
+---
+
 ## 后端 API 开发 / Backend API Development
 
 ### 路由注册 / Route Registration
@@ -526,6 +615,9 @@ self._api.register_ui_event_handler("user_action", handler_fn)
 ## 相关文档 / Related
 
 - [api-reference.md](api-reference.md) — 后端 PluginAPI 完整方法 / Full backend PluginAPI methods
+- [rest-api.md](rest-api.md) — 插件管理 REST API / Plugin management REST API
 - [plugin-json.md](plugin-json.md) — 清单文件规范 / Manifest schema
 - [permissions.md](permissions.md) — 权限模型 / Permission model
+- [testing.md](testing.md) — 测试指南（含 UI 插件测试）/ Testing guide (incl. UI plugin testing)
+- [examples/ui-plugin.md](examples/ui-plugin.md) — 完整 UI 插件示例 / Complete UI plugin example
 - [getting-started.md](getting-started.md) — 快速上手 / Quick start guide

@@ -51,6 +51,16 @@
 - **Advanced**（需用户授权）：`channel.register`, `channel.send`, `memory.read`, `memory.write`, `llm.register`, `hooks.message`, `hooks.retrieve`, `retrieval.register`, `search.register`, `routes.register`, `brain.access`, `vector.access`, `settings.read`
 - **System**（需用户授权）：`memory.replace`, `hooks.all`, `system.config.write`
 
+#### 全栈 UI 插件额外要求
+
+若插件包含前端 UI（`plugin.json` 含 `ui` 字段），还需确保：
+- `ui/dist/index.html` 已构建并包含在提交中（不要只提交源码）
+- 前端必须内联 Bridge SDK 或引用标准 SDK 模板
+- 支持 `light`/`dark` 主题切换
+- 声明 `requires.plugin_ui_api: "~1"` 版本兼容
+
+详见 [sdk-docs/plugin-ui.md](sdk-docs/plugin-ui.md)。
+
 #### 质量要求
 
 - [ ] `plugin.json` 格式正确，`id` 全局唯一
@@ -58,6 +68,7 @@
 - [ ] 包含中英文 `README.md`
 - [ ] 异常处理完善，不会导致宿主崩溃
 - [ ] 无硬编码密钥/凭证
+- [ ] UI 插件：前端产物已构建，主题适配正常 / UI plugins: frontend built, theme works
 
 ---
 
@@ -79,6 +90,16 @@ Thanks for your interest in contributing to the OpenAkita plugin ecosystem!
    - `icon.png` or `icon.svg` — Icon (128x128px recommended)
 4. Submit a Pull Request
 
+### Full-Stack UI Plugin Extra Requirements
+
+If your plugin includes a frontend UI (`ui` field in `plugin.json`):
+- `ui/dist/index.html` must be pre-built and included (don't submit source only)
+- Frontend must inline the Bridge SDK or reference the standard SDK template
+- Must support `light`/`dark` theme switching
+- Declare `requires.plugin_ui_api: "~1"` for version compatibility
+
+See [sdk-docs/plugin-ui.md](sdk-docs/plugin-ui.md) for details.
+
 ### Quality Checklist
 
 - [ ] Valid `plugin.json` with globally unique `id`
@@ -86,3 +107,4 @@ Thanks for your interest in contributing to the OpenAkita plugin ecosystem!
 - [ ] Bilingual `README.md` included
 - [ ] Proper error handling (must not crash the host)
 - [ ] No hardcoded secrets or credentials
+- [ ] UI plugins: frontend assets built, theme adaptation works
