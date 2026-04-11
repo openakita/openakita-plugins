@@ -8,10 +8,11 @@ Build plugins for [OpenAkita](https://github.com/openakita/openakita) without in
 pip install openakita-plugin-sdk
 ```
 
-For development from source:
+For development from source (from the [main repository](https://github.com/openakita/openakita)):
 
 ```bash
-pip install -e ./openakita-plugin-sdk
+git clone https://github.com/openakita/openakita.git
+pip install -e openakita/openakita-plugin-sdk
 ```
 
 ## 30-Second Quick Start
@@ -24,7 +25,7 @@ python -m openakita_plugin_sdk.scaffold --id my-tool --type tool --dir ./plugins
 
 This creates a complete plugin directory with `plugin.json`, `plugin.py`, and `README.md`.
 
-Available types: `tool`, `channel`, `rag`, `memory`, `llm`, `hook`, `skill`, `mcp`.
+Available types: `tool`, `channel`, `rag`, `memory`, `llm`, `hook`, `skill`, `mcp`, `ui`.
 
 ### Option B: Use decorators
 
