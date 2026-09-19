@@ -40,7 +40,7 @@ env_any:
 | `hh_image_sketch` | 涂鸦作画 | `prompt`, `images[]` 或 `from_asset_ids`, `sketch_style?` |
 | `hh_image_ecommerce` | 电商场景图 | `product_name`, `prompt`, `ecommerce_scenes[]` |
 | `hh_t2v` | 文生视频 | `prompt`, `model?`, `duration?`, `resolution?`, `aspect_ratio?` |
-| `hh_i2v` | 图生视频（首帧 / 首尾帧 / 续写） | `prompt`, `first_frame_url` 或 `from_asset_ids`, `last_frame_url?`, `task_type?` |
+| `hh_i2v` | 图生视频（首帧 / 首尾帧 / 续写） | `prompt`, `first_frame_url`（远端 URL 或本地图片路径）或 `from_asset_ids`, `last_frame_url?`, `task_type?` |
 | `hh_r2v` | 参考生视频（多角色互动） | `prompt`, `reference_urls` 或 `from_asset_ids`, `shot_type?` |
 | `hh_video_edit` | 视频编辑 | `prompt`, `source_video_url`（兼容 `video_url`）, `reference_urls?` |
 | `hh_photo_speak` | 照片说话 | `image_url`, `text` 或 `audio_url`, `voice_id?` |
@@ -57,6 +57,12 @@ env_any:
 `video_url`, `video_path`, `last_frame_url`, `last_frame_path`,
 `image_urls`, `local_paths`, `asset_ids`。失败时 `ok=false` + `error_kind` +
 `error_message` + `terminal=true`。
+
+### 素材输入
+
+视频工具的图片、视频、音频字段接受 HTTP(S) URL 或已存在的本地文件路径。插件使用自身 OSS 配置上传本地素材，再向 DashScope 提交签名 URL；已有远端 URL 原样使用，无需再次上传。
+
+图生视频优先使用 `first_frame_url`，也兼容 `first_frame_path`、`image_url`、`image_path`（按此顺序回退）。例如：`hh_i2v(prompt="猫头鹰抓老鼠", first_frame_url="/workspace/owl.png", duration=5)`。缺少首帧参数与 OSS 配置/上传错误会分别返回。
 
 ## 3 · 工作台联动协议
 

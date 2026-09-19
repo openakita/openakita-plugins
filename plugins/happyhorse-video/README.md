@@ -28,7 +28,7 @@
 
 | Mode | 中文名 | 默认模型 | 备选 |
 |---|---|---|---|
-| `t2v` | 文生视频 | `happyhorse-1.0-t2v` | `wan2.6-t2v` |
+| `t2v` | 文生视频 | `happyhorse-1.0-t2v` | `wan3.0-video` / `wan3.0-video-prime` / `happyhorse-1.1-t2v` / `wan2.7-t2v`（含 2026-06-12、2026-04-25 快照）/ `wan2.6-t2v` |
 | `i2v` | 图生视频（首帧） | `happyhorse-1.0-i2v` | `wan2.6-i2v` / `wan2.6-i2v-flash` / `wan2.7-i2v` |
 | `i2v_end` | 首尾帧生视频 | `wan2.7-i2v` | — |
 | `video_extend` | 视频续写 | `wan2.7-i2v` | — |
@@ -42,6 +42,20 @@
 | `long_video` | 长视频拼接 | 复用所选 i2v 模型 | — |
 
 > HappyHorse 1.0 原生音视频同步，t2v / i2v / r2v / video_edit 不需要走 TTS step；其它 mode 仍走 cosyvoice / Edge-TTS。
+
+### 新版文生视频模型
+
+按 2026-09-18 官方文档核对。模型、API Key 和 Endpoint 必须属于支持该模型的同一地域。
+
+| 模型 | 分辨率 | 时长 | 说明 |
+|---|---|---|---|
+| 万相 3.0 / 3.0 Prime | 480P / 720P / 1080P | 2–30 秒 | 固定比例文生视频，支持音轨开关；Prime 能力对齐标准版，生成更快、单价更高 |
+| HappyHorse 1.1 | 480P / 720P / 1080P | 3–15 秒 | 原生有声视频，支持水印开关 |
+| 万相 2.7（含快照） | 720P / 1080P | 2–15 秒 | 支持参考音频、反向提示词；镜头结构通过提示词描述 |
+
+费用预估采用北京地域公开原价，实际以账户地域和账单为准。保留现有默认模型与设置；可在模型下拉框选择新版模型。万相 3.0 的自动比例、智能时长和全能参考输入未在此文生视频表单中开放。
+
+文档：[万相 3.0](https://help.aliyun.com/zh/model-studio/wan3-video-generation-api-reference)、[HappyHorse 文生视频](https://help.aliyun.com/zh/model-studio/happyhorse-text-to-video-api-reference)、[万相 2.7](https://help.aliyun.com/zh/model-studio/text-to-video-api-reference)。
 
 ### 内置图片模式
 

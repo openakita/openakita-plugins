@@ -732,6 +732,10 @@ function parseSizeAspect(size) {
   if (!w || !h) return "";
   const ratio = w / h;
   const known = [
+    ["2:3", 2 / 3],
+    ["3:2", 3 / 2],
+    ["4:5", 4 / 5],
+    ["5:4", 5 / 4],
     ["21:9", 21 / 9],
     ["16:9", 16 / 9],
     ["4:3", 4 / 3],
@@ -1251,13 +1255,13 @@ function useTaskHeartbeat(taskId) {
   return task;
 }
 
-function ProgressLoader({ task }) {
+function ProgressLoader({ task, mediaType = "video" }) {
   const pct = Math.min(100, Math.max(0, Math.round(Number(task?.progress || 0))));
   return (
     <div className="video-player-wrap oa-loader oa-loader--dark">
       <div className="oa-loader__inner">
         <div className="oa-loader__spinner" />
-        <div className="oa-loader__title">任务已提交至 DashScope，正在生成视频…</div>
+        <div className="oa-loader__title">任务已提交至 DashScope，正在生成{mediaType === "image" ? "图片" : "视频"}…</div>
         {pct > 0 && (
           <div className="oa-loader__progress">
             <div className="oa-loader__bar">
@@ -1710,8 +1714,11 @@ async function downloadTaskArtifact(task) {
   return { ok: true };
 }
 
-function TaskPreviewPane({ taskId, task, costPreview, onGoTasks, onOpenStoryboard, showCost = true }) {
+function TaskPreviewPane({ taskId, task, costPreview, onGoTasks, onOpenStoryboard, showCost = true, mediaType = "video" }) {
   const liveTask = task || null;
+  const previewMediaType = liveTask?.mode
+    ? (liveTask.mode.startsWith("image_") ? "image" : "video")
+    : mediaType;
   const videoUrl = taskVideoUrl(liveTask);
   const imageUrls = taskImageUrls(liveTask);
   const status = liveTask?.status;
@@ -1857,10 +1864,10 @@ function TaskPreviewPane({ taskId, task, costPreview, onGoTasks, onOpenStoryboar
       <div className="split-right oa-preview-area">
         <div className="oa-preview-empty">
           <div className="oa-preview-empty__icon">
-            <Icon name="film" size={34} />
+            <Icon name={previewMediaType === "image" ? "image" : "film"} size={34} />
           </div>
           <div className="oa-preview-empty__title">暂无当前任务</div>
-          <div className="oa-preview-empty__hint">左侧填写参数并提交后，这里会显示生成进度和视频预览。</div>
+          <div className="oa-preview-empty__hint">左侧填写参数并提交后，这里会显示生成进度和{previewMediaType === "image" ? "图片" : "视频"}预览。</div>
         </div>
         {showCost && <CostPreviewCard costPreview={costPreview} />}
       </div>
@@ -1940,7 +1947,7 @@ function TaskPreviewPane({ taskId, task, costPreview, onGoTasks, onOpenStoryboar
       )}
 
       {(!liveTask || status === "pending" || status === "running") && (
-        <ProgressLoader task={liveTask} />
+        <ProgressLoader task={liveTask} mediaType={previewMediaType} />
       )}
 
       {(status === "succeeded" || status === "done") && (
@@ -2073,6 +2080,124 @@ function TaskPreviewPane({ taskId, task, costPreview, onGoTasks, onOpenStoryboar
   );
 }
 
+// ── Inspiration gallery ─────────────────────────────────────────────
+const INSPIRATION_BASE = "https://openakita-plugin-assets.oss-cn-beijing.aliyuncs.com/happyhorse-video/";
+let inspirationRequest = null;
+let inspirationExpires = 0;
+
+function inspirationUrl(value) {
+  if (typeof value !== "string" || !value) return "";
+  try {
+    const url = new URL(value, INSPIRATION_BASE);
+    return url.href.startsWith(INSPIRATION_BASE) ? url.href : "";
+  } catch (_) { return ""; }
+}
+
+function loadInspirations() {
+  if (!inspirationRequest || Date.now() >= inspirationExpires) {
+    inspirationExpires = Date.now() + 300000;
+    inspirationRequest = api("GET", "/inspiration").then(({ manifest }) => {
+      if (!Array.isArray(manifest?.items)) throw new Error("Invalid inspiration manifest");
+      return manifest.items.filter((item) => item && ["image", "video"].includes(item.type)
+        && typeof item.title === "string" && typeof item.prompt === "string"
+        && inspirationUrl(item.url) && Number(item.width) > 0 && Number(item.height) > 0
+        && (item.type !== "video" || inspirationUrl(item.poster_url)))
+        .map((item) => ({ ...item, url: inspirationUrl(item.url),
+          poster_url: inspirationUrl(item.poster_url),
+          sources: (Array.isArray(item.sources) && item.sources.length ? item.sources : [{ url: item.url, mime_type: "video/mp4" }])
+            .filter((source) => source && inspirationUrl(source.url) && ["video/mp4", "video/webm"].includes(source.mime_type))
+            .map((source) => ({ ...source, url: inspirationUrl(source.url) })),
+        })).sort((a, b) => Number(a.prompt_number) - Number(b.prompt_number));
+    }).catch((error) => { inspirationRequest = null; throw error; });
+  }
+  return inspirationRequest;
+}
+
+function InspirationCard({ item, onChoose }) {
+  const [active, setActive] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const cardRef = useRef(null);
+  const videoRef = useRef(null);
+  const isVideo = item.type === "video";
+  const source = item.sources[sourceIndex];
+  const stop = () => { setActive(false); setPlaying(false); };
+  useEffect(() => {
+    const hide = () => { if (document.hidden) stop(); };
+    document.addEventListener("visibilitychange", hide);
+    const observer = typeof IntersectionObserver !== "undefined" ? new IntersectionObserver(
+      ([entry]) => { if (!entry.isIntersecting) stop(); }
+    ) : null;
+    if (cardRef.current) observer?.observe(cardRef.current);
+    return () => { observer?.disconnect(); document.removeEventListener("visibilitychange", hide); };
+  }, []);
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!active || !video) return;
+    video.muted = true;
+    const attempt = video.play();
+    attempt?.catch(() => setPlaying(false));
+    return () => { video.pause(); };
+  }, [active, sourceIndex]);
+  return (
+    <button type="button" ref={cardRef} className={"inspiration-card" + (active ? " is-active" : "")}
+      style={{ aspectRatio: `${item.width} / ${item.height}` }}
+      aria-label={`生成同款：${item.title}`}
+      onPointerEnter={(event) => { if (event.pointerType !== "touch") setActive(true); }}
+      onPointerLeave={stop} onFocus={() => setActive(true)} onBlur={stop}
+      onClick={() => { stop(); onChoose(item); }}>
+      <img className="inspiration-card__media" src={isVideo ? item.poster_url : item.url}
+        width={item.width} height={item.height} alt="" loading="lazy" decoding="async" />
+      {isVideo && active && source && (
+        <video key={source.url} ref={videoRef}
+          className={"inspiration-card__media inspiration-card__video" + (playing ? " is-playing" : "")}
+          muted loop playsInline autoPlay preload="none" poster={item.poster_url}
+          onPlaying={() => setPlaying(true)}
+          onError={() => { setPlaying(false); setSourceIndex(sourceIndex + 1); }}>
+          <source src={source.url} type={source.mime_type}
+            onError={() => { setPlaying(false); setSourceIndex(sourceIndex + 1); }} />
+        </video>
+      )}
+      <span className="inspiration-card__top">生成同款 <span aria-hidden="true">→</span></span>
+      <span className="inspiration-card__bottom">
+        <span className="inspiration-card__title">{item.title}</span>
+        <span className="inspiration-card__prompt">{item.prompt}</span>
+      </span>
+    </button>
+  );
+}
+
+function InspirationGallery({ type, onChoose }) {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    setError(false);
+    loadInspirations().then((result) => { if (!cancelled) setItems(result.filter((item) => item.type === type)); })
+      .catch(() => { if (!cancelled) setError(true); });
+    return () => { cancelled = true; };
+  }, [type, retry]);
+  return (
+    <section className="inspiration-gallery" aria-label={type === "image" ? "生图灵感" : "视频灵感"}>
+      <h2 className="page-title">{type === "image" ? "生图灵感" : "视频灵感"}</h2>
+      <p className="page-subtitle">从一个画面开始，创作你的下一份作品</p>
+      {error ? <div className="inspiration-status" role="status">灵感暂时无法加载。 <button type="button" className="btn btn-ghost" onClick={() => setRetry((n) => n + 1)}>重试</button></div>
+        : !items ? <div className="inspiration-status" role="status">正在加载灵感…</div>
+        : !items.length ? <div className="inspiration-status">暂无灵感素材</div>
+        : <div className="inspiration-grid">{items.map((item) => <InspirationCard key={item.id} item={item} onChoose={onChoose} />)}</div>}
+    </section>
+  );
+}
+
+function focusInspirationPrompt(id) {
+  requestAnimationFrame(() => {
+    const panel = document.getElementById(id);
+    panel?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    panel?.querySelector("textarea")?.focus({ preventScroll: true });
+  });
+}
+
 function CreateTab({
   catalog,
   settings,
@@ -2084,6 +2209,7 @@ function CreateTab({
   subtitle = "按左侧步骤补齐素材、提示词和输出参数，右侧查看成本、进度与预览。",
   showModeChooser = false,
   modeIds = null,
+  showInspiration = false,
 }) {
   catalog = catalog || DEFAULT_CATALOG;
   const [mode, setMode] = useState(initialMode);
@@ -2112,7 +2238,7 @@ function CreateTab({
   const [shotType, setShotType] = useState("");
   const [drivingAudioUrl, setDrivingAudioUrl] = useState("");
   const [modePro, setModePro] = useState(false);
-  // ``audioEnabled`` only affects Wan 2.6 *-flash; null = inherit
+  // ``audioEnabled`` affects Wan 3.0 and Wan 2.6 *-flash; null = inherit
   // default (the model decides). We initialise to null on first paint.
   const [audioEnabled, setAudioEnabled] = useState(null);
   const [costPreview, setCostPreview] = useState(null);
@@ -2299,7 +2425,7 @@ function CreateTab({
     if (modelEntry?.supports_watermark || animateMode) body.watermark = !!watermark;
     if ((modelEntry?.shot_types || []).length) body.shot_type = (shotType || "").trim();
     if (modelEntry?.supports_audio_url) body.driving_audio_url = (drivingAudioUrl || "").trim();
-    if (audioEnabled !== null && modelEntry?.model_id && /flash/.test(modelEntry.model_id)) body.audio = audioEnabled;
+    if (audioEnabled !== null && (modelEntry?.supports_audio_toggle || /flash/.test(modelEntry?.model_id || ""))) body.audio = audioEnabled;
     if (animateMode) body.mode_pro = !!modePro;
     if (avatarComposeMode && prompt.trim()) body.compose_prompt = prompt.trim();
     return body;
@@ -2364,7 +2490,7 @@ function CreateTab({
           // ``audio`` / ``driving_audio_url`` shift the price tier for
           // Wan 2.6 -flash variants; include them so the preview tracks
           // the real cost as the user toggles "background audio".
-          ...(audioEnabled !== null && modelEntry?.model_id && /flash/.test(modelEntry.model_id) ? { audio: audioEnabled } : {}),
+          ...(audioEnabled !== null && (modelEntry?.supports_audio_toggle || /flash/.test(modelEntry?.model_id || "")) ? { audio: audioEnabled } : {}),
           ...(modelEntry?.supports_audio_url && drivingAudioUrl ? { driving_audio_url: drivingAudioUrl } : {}),
         });
         setCostPreview(r);
@@ -2460,7 +2586,8 @@ function CreateTab({
   const submitDisabled = submitting || duplicateSubmit || (promptRequired && !prompt.trim());
 
   return (
-    <div className="split-layout workbench-layout">
+    <>
+    <div className="split-layout workbench-layout" id="video-create-form">
       <div className="split-left create-panel">
         <div className="workbench-title">
           <div>
@@ -2778,6 +2905,7 @@ function CreateTab({
           modelEntry.supports_negative_prompt ||
           modelEntry.supports_watermark ||
           modelEntry.supports_audio_url ||
+          modelEntry.supports_audio_toggle ||
           ((modelEntry.shot_types || []).length > 0)
         ) && (
           <section className="card create-section">
@@ -2791,7 +2919,7 @@ function CreateTab({
                   title="点击展开/收起高级参数"
                 >
                   <Icon name={advOpen ? "chevron-down" : "chevron-right"} size={14} />
-                  高级参数（Wan 2.6 / 2.7）
+                  高级参数
                 </button>
               </h3>
               <span>仅当前所选模型支持的项才会显示</span>
@@ -2839,9 +2967,9 @@ function CreateTab({
                 )}
                 {/* Wan 2.6 *-flash variants accept an audio on/off
                     toggle that halves the per-second price when off. */}
-                {modelEntry.model_id && /flash/.test(modelEntry.model_id) && (
+                {(modelEntry.supports_audio_toggle || /flash/.test(modelEntry.model_id || "")) && (
                   <div className="field">
-                    <label title="关闭则生成无声视频；万相 2.6 *-flash 无声档单价减半">
+                    <label title="关闭则生成无声视频；万相 3.0 开关声音价格相同，万相 2.6 flash 无声档更便宜">
                       生成音轨 (audio)
                     </label>
                     <select
@@ -2853,11 +2981,11 @@ function CreateTab({
                     >
                       <option value="">（模型默认）</option>
                       <option value="true">开启 audio=true</option>
-                      <option value="false">关闭 audio=false（更便宜）</option>
+                      <option value="false">关闭 audio=false{/flash/.test(modelEntry.model_id || "") ? "（更便宜）" : ""}</option>
                     </select>
                   </div>
                 )}
-                {modelEntry.supports_audio_url && mode !== "t2v" && (
+                {modelEntry.supports_audio_url && (
                   <div className="field" style={{ gridColumn: "1 / -1" }}>
                     <UploadUrlField
                       label="背景 / 驱动音频 URL (driving_audio_url)"
@@ -2865,7 +2993,7 @@ function CreateTab({
                       value={drivingAudioUrl}
                       onChange={setDrivingAudioUrl}
                       accept="audio/*"
-                      hint="可选：上传/粘贴音频。Wan 2.7 i2v 用作驱动音；Wan 2.6 i2v/r2v/-flash 用作背景音"
+                      hint="可选：上传或粘贴当前模型支持的背景 / 驱动音频 URL。"
                     />
                   </div>
                 )}
@@ -2905,6 +3033,18 @@ function CreateTab({
         onGoTasks={() => onSubmit?.({ goTasks: true })}
       />
     </div>
+    {showInspiration && <InspirationGallery type="video" onChoose={(item) => {
+      const targetId = mode === "t2v" ? modelId : (settings?.default_model_t2v || catalog.default_models?.t2v);
+      const target = catalog.models?.find((model) => model.mode === "t2v" && model.model_id === targetId)
+        || catalog.models?.find((model) => model.mode === "t2v");
+      setMode("t2v");
+      if (target) setModelId(target.model_id);
+      setPrompt(item.prompt);
+      const ratios = target?.aspects || catalog.aspects || ["16:9"];
+      setAspect(ratios.includes(item.requested_aspect_ratio) ? item.requested_aspect_ratio : ratios[0]);
+      focusInspirationPrompt("video-create-form");
+    }} />}
+    </>
   );
 }
 
@@ -2937,22 +3077,31 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
     setSize(settings?.default_image_size || imageCatalog.default_size || "2K");
   }, [settings, imageCatalog.default_model, imageCatalog.default_size]);
 
-  // Image models declare wildly different size spaces ("2K" vs
-  // "1024*1024" vs "1664*928"...). When the user switches models, the
-  // previously-chosen size is almost always invalid for the new model
-  // and DashScope rejects the request with a 400. Auto-snap the size
-  // back into the new model's allowed set whenever the model id
-  // changes (or the catalog reloads).
+  const supportsCanvasSize = ["image_text2img", "image_edit", "image_ecommerce"].includes(mode);
+  const availableModels = models.filter((m) => !supportsCanvasSize || !m.modes || m.modes.includes(mode));
+  const selectedModel = availableModels.find((m) => m.id === modelId || m.model_id === modelId) || availableModels[0];
+  const effectiveModelId = selectedModel?.id || modelId;
+  const sizePresets = supportsCanvasSize ? (selectedModel?.size_presets || []).filter(
+    (p) => p.tier !== "4K" || mode === "image_text2img"
+  ) : [];
+  const sizes = sizePresets.length ? sizePresets.map((p) => p.size)
+    : (selectedModel?.sizes?.length ? selectedModel.sizes : (imageCatalog.sizes || ["2K"]));
+  // Normalize synchronously as well as in state, so switching models cannot
+  // submit a stale size before the effect runs.
+  const effectiveSize = sizes.includes(size) ? size
+    : (sizePresets.find((p) => p.tier === size && p.ratio === "1:1")?.size || sizes[0]);
+  const selectedPreset = sizePresets.find((p) => p.size === effectiveSize);
+  const sizeRatios = [...new Set(sizePresets.map((p) => p.ratio))];
+  const visiblePresets = sizePresets.filter((p) => p.ratio === selectedPreset?.ratio);
   useEffect(() => {
-    const m = models.find((x) => x.id === modelId);
-    const allowed = m?.sizes?.length ? m.sizes : (imageCatalog.sizes || []);
-    if (allowed.length && !allowed.includes(size)) {
-      setSize(m?.default_size || allowed[0]);
-    }
-  }, [modelId, models, imageCatalog.sizes]);
-
-  const selectedModel = models.find((m) => m.id === modelId) || models[0];
-  const sizes = selectedModel?.sizes?.length ? selectedModel.sizes : (imageCatalog.sizes || ["2K"]);
+    if (size !== effectiveSize) setSize(effectiveSize);
+    if (modelId !== effectiveModelId) setModelId(effectiveModelId);
+  }, [size, effectiveSize, modelId, effectiveModelId]);
+  const chooseImageRatio = (ratio) => {
+    const matching = sizePresets.filter((p) => p.ratio === ratio);
+    const next = matching.find((p) => p.tier === selectedPreset?.tier) || matching[0];
+    if (next) setSize(next.size);
+  };
   const modeSpec = modes.find((m) => m.id === mode);
   const requiresImages = (modeSpec?.required_assets || []).includes("images");
   const supportsPrompt = ["image_text2img", "image_edit", "image_background", "image_sketch", "image_ecommerce"].includes(mode);
@@ -2966,15 +3115,16 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
     mode,
     prompt: supportsPrompt ? prompt : "",
     product_name: mode === "image_ecommerce" ? productName : "",
-    model_id: supportsModelAndSize ? modelId : "",
-    size: supportsModelAndSize ? size : "",
+    model_id: supportsModelAndSize ? effectiveModelId : "",
+    size: supportsModelAndSize ? effectiveSize : "",
     negative_prompt: supportsNegativePrompt ? negativePrompt : "",
     n: supportsCount ? n : 1,
     images: parsedImages,
     style_index: mode === "image_style_repaint" ? styleIndex : 0,
     style_ref_url: mode === "image_style_repaint" ? styleRefUrl : "",
     ref_image_url: mode === "image_background" ? backgroundRefUrl : "",
-    output_ratio: mode === "image_outpaint" ? outputRatio : "",
+    output_ratio: mode === "image_outpaint" ? outputRatio
+      : supportsCanvasSize ? (selectedPreset?.ratio || parseSizeAspect(effectiveSize)) : "",
     sketch_style: mode === "image_sketch" ? sketchStyle : "",
     ecommerce_scenes: mode === "image_ecommerce" ? scenes : [],
     wait_for_completion: false,
@@ -2987,7 +3137,11 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
     prompt,
     productName,
     modelId,
+    effectiveModelId,
     size,
+    effectiveSize,
+    selectedPreset?.ratio,
+    supportsCanvasSize,
     negativePrompt,
     n,
     imageUrls,
@@ -3077,7 +3231,8 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
   const imageSubmitDisabled = busy || duplicateImageSubmit || missingContent || (requiresImages && !parsedImages.length);
 
   return (
-    <div className="split-layout workbench-layout">
+    <>
+    <div className="split-layout workbench-layout" id="image-create-form">
       <div className="split-left create-panel">
         <div className="workbench-title">
           <div>
@@ -3110,16 +3265,27 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
             <div className="settings-grid two">
               <div className="field">
                 <label>图片模型</label>
-                <select value={modelId} onChange={(e) => setModelId(e.target.value)}>
-                  {models.map((m) => <option key={m.id} value={m.id}>{m.label_zh}</option>)}
+                <select value={effectiveModelId} onChange={(e) => setModelId(e.target.value)}>
+                  {availableModels.map((m) => <option key={m.id} value={m.id}>{m.label_zh}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>尺寸</label>
-                <select value={size} onChange={(e) => setSize(e.target.value)}>
-                  {sizes.map((s) => <option key={s}>{s}</option>)}
+                <select value={effectiveSize} onChange={(e) => setSize(e.target.value)}>
+                  {sizePresets.length ? visiblePresets.map((p) => (
+                    <option key={p.size} value={p.size}>{p.tier ? `${p.tier} · ` : ""}{p.size.replace("*", " × ")}</option>
+                  )) : sizes.map((s) => <option key={s}>{s}</option>)}
                 </select>
               </div>
+              {!!sizeRatios.length && (
+                <div className="field">
+                  <label>画面比例</label>
+                  <select value={selectedPreset?.ratio || ""} onChange={(e) => chooseImageRatio(e.target.value)}>
+                    {sizeRatios.map((ratio) => <option key={ratio} value={ratio}>{ratio}</option>)}
+                  </select>
+                  <small>比例与尺寸直接控制成图，无需写入提示词。</small>
+                </div>
+              )}
             </div>
           ) : mode === "image_style_repaint" ? (
             <div className="library-callout library-callout--compact">
@@ -3168,9 +3334,9 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
               negativePrompt={negativePrompt}
               setNegativePrompt={setNegativePrompt}
               showNegative={supportsNegativePrompt}
-              imageSize={size}
-              setImageSize={supportsModelAndSize ? setSize : null}
-              imageSizes={supportsModelAndSize ? sizes : []}
+              imageSize={effectiveSize}
+              setImageSize={null}
+              imageSizes={[]}
               outputRatio={outputRatio}
               setOutputRatio={null}
               compact
@@ -3296,9 +3462,24 @@ function ImageTab({ catalog, settings, onSubmit, onSettings }) {
         taskId={previewTaskId}
         task={liveTask}
         showCost={false}
+        mediaType="image"
         onGoTasks={() => onSubmit?.({ goTasks: true })}
       />
     </div>
+    <InspirationGallery type="image" onChoose={(item) => {
+      const textModels = models.filter((model) => !model.modes || model.modes.includes("image_text2img"));
+      const target = textModels.find((model) => model.id === modelId || model.model_id === modelId) || textModels[0];
+      setMode("image_text2img");
+      setPrompt(item.prompt);
+      if (target) {
+        setModelId(target.id || target.model_id);
+        const presets = (target.size_presets || []).filter((preset) => preset.ratio === item.requested_aspect_ratio);
+        const preset = presets.find((entry) => entry.tier === selectedPreset?.tier) || presets[0];
+        if (preset) setSize(preset.size);
+      }
+      focusInspirationPrompt("image-create-form");
+    }} />
+    </>
   );
 }
 
@@ -6551,6 +6732,7 @@ function App() {
             onSubmit={(payload) => payload?.goTasks ? setTab("tasks") : notifyTaskSubmitted(payload)}
             onSettings={() => setTab("settings")}
             initialMode="t2v"
+            showInspiration
             title="视频生成"
             subtitle="文生、图生、首尾帧、参考生成、续写和编辑统一在这里选择；常用比例、镜头、风格、反向提示词可点选，也支持自定义输入。"
             showModeChooser

@@ -234,7 +234,9 @@ from happyhorse_inline.asset_probe import (  # noqa: E402
     image_target_for,
     video_target_for,
 )
+from happyhorse_inline.media_inputs import normalize_first_frame, prepare_media_inputs  # noqa: E402
 from happyhorse_inline.oss_uploader import (  # noqa: E402
+    OssNotConfigured,
     OssUploader,
     OssUploadError,
 )
@@ -335,6 +337,8 @@ class CreateTaskBody(BaseModel):
     # normalizes these to source_video_url / ref_images_url where needed.
     video_url: str = ""
     first_frame_url: str = ""
+    first_frame_path: str = ""
+    image_path: str = ""
     last_frame_url: str = ""
     source_video_url: str = ""
     reference_urls: list[str] = Field(default_factory=list)
@@ -1140,14 +1144,27 @@ class Plugin(PluginBase):
 
         try:
             params = body.model_dump()
-            target = video_target_for(body.aspect_ratio, body.resolution)
-            params["expected_media"] = target.to_dict()
+            if selected_model.output_dimension_policy == "aspect":
+                # These APIs specify a ratio and resolution tier without a
+                # fixed pixel table. Verify the returned ratio, not guessed pixels.
+                params["expected_media"] = {
+                    "aspect_ratio": body.aspect_ratio,
+                    "resolution": body.resolution,
+                    "validation": "aspect",
+                }
+            else:
+                target = video_target_for(
+                    body.aspect_ratio, body.resolution,
+                    dimension_policy=selected_model.output_dimension_policy,
+                )
+                params["expected_media"] = target.to_dict()
             if params.get("video_url") and not params.get("source_video_url"):
                 params["source_video_url"] = params["video_url"]
             if params.get("ref_images_url") and not params.get("image_urls"):
                 params["image_urls"] = list(params["ref_images_url"])
             if params.get("ref_images_url") and not params.get("image_url"):
                 params["image_url"] = params["ref_images_url"][0]
+            normalize_first_frame(body.mode, params)
             # Expand from_asset_ids before validation so per-mode required
             # asset checks see the materialised URLs.
             if body.from_asset_ids:
@@ -1176,6 +1193,17 @@ class Plugin(PluginBase):
                 raise
             except Exception as exc:  # noqa: BLE001
                 logger.warning("preflight asset probe failed (non-blocking): %s", exc)
+
+            try:
+                await prepare_media_inputs(
+                    params, uploader=self._oss, uploads_root=self._uploads_dir()
+                )
+            except (ValueError, OssNotConfigured) as exc:
+                raise HTTPException(status_code=400, detail=str(exc)) from exc
+            except OssUploadError as exc:
+                raise HTTPException(
+                    status_code=502, detail=f"OSS media upload failed: {exc}"
+                ) from exc
 
             task_id = await self._tm.create_task(
                 mode=body.mode,
@@ -1637,6 +1665,14 @@ class Plugin(PluginBase):
         # column held either form depending on which path produced the
         # task, breaking group-by-model dashboards downstream.
         resolved = image_model_for(model_key)
+        if (
+            body.mode in {"image_text2img", "image_edit", "image_ecommerce"}
+            and body.mode not in resolved.modes
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"模型 {resolved.model_id} 不支持当前图片模式，请选择其他模型",
+            )
         size = body.size or str(cfg.get("default_image_size") or DEFAULT_IMAGE_SIZE)
         # If the requested size isn't supported by the chosen model the
         # downstream DashScope call would 400. Fall back to the model's
@@ -1658,12 +1694,37 @@ class Plugin(PluginBase):
                 allowed_sizes[0],
             )
             size = allowed_sizes[0]
-        requested_ratio = str(body.output_ratio or cfg.get("default_aspect_ratio") or "16:9")
+        # An explicit pixel selection carries its own ratio. Do not validate it
+        # against an unrelated video/default ratio when the caller omitted one.
+        pixel_match = re.fullmatch(r"(\d+)[*xX](\d+)", size)
+        pixel_ratio = f"{pixel_match[1]}:{pixel_match[2]}" if pixel_match else ""
+        requested_ratio = str(
+            body.output_ratio or pixel_ratio or cfg.get("default_aspect_ratio") or "16:9"
+        )
         if body.mode in {"image_text2img", "image_edit", "image_ecommerce"}:
             try:
                 target = image_target_for(requested_ratio, size)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
+            if resolved.model_id.startswith("wan2.7-") or resolved.model_id == "wan2.6-image":
+                max_edge = (
+                    4096
+                    if resolved.model_id == "wan2.7-image-pro"
+                    and body.mode == "image_text2img"
+                    and not params.get("images")
+                    and not params.get("enable_sequential")
+                    else 2048
+                )
+                max_ratio = 4 if resolved.model_id == "wan2.6-image" else 8
+                if not (
+                    768 * 768 <= target.width * target.height <= max_edge * max_edge
+                    and 1 / max_ratio <= target.width / target.height <= max_ratio
+                ):
+                    raise HTTPException(
+                        status_code=422,
+                        detail=f"当前模型和模式要求总像素在 768×768 至 {max_edge}×{max_edge} "
+                        f"之间，宽高比在 1:{max_ratio} 至 {max_ratio}:1 之间",
+                    )
             explicit_size = f"{target.width}*{target.height}"
             if allowed_sizes and not supports_quality_labels:
                 if explicit_size not in allowed_sizes:
@@ -2121,10 +2182,23 @@ class Plugin(PluginBase):
                         "duration": {"type": "integer"},
                         "resolution": {
                             "type": "string",
-                            "enum": ["720P", "1080P"],
+                            "enum": list(dict.fromkeys(
+                                resolution for entry in entries for resolution in entry.resolutions
+                            )),
                         },
                         "aspect_ratio": {"type": "string", "default": "16:9"},
-                        "first_frame_url": {"type": "string"},
+                        "first_frame_url": {
+                            "type": "string",
+                            "description": "First-frame HTTP(S) URL or existing local image path. Local files are uploaded using this plugin's OSS settings.",
+                        },
+                        "first_frame_path": {
+                            "type": "string",
+                            "description": "Local first-frame image path; alias for first_frame_url.",
+                        },
+                        "image_path": {
+                            "type": "string",
+                            "description": "Legacy local first-frame path for i2v.",
+                        },
                         "last_frame_url": {"type": "string"},
                         "source_video_url": {"type": "string"},
                         "video_url": {
@@ -2132,7 +2206,10 @@ class Plugin(PluginBase):
                             "description": "Alias for source_video_url.",
                         },
                         "reference_urls": {"type": "array", "items": {"type": "string"}},
-                        "image_url": {"type": "string"},
+                        "image_url": {
+                            "type": "string",
+                            "description": "Image URL or local path; for i2v, alias for first_frame_url when the canonical field is absent.",
+                        },
                         "image_urls": {"type": "array", "items": {"type": "string"}},
                         "ref_images_url": {
                             "type": "array",
@@ -3374,6 +3451,37 @@ class Plugin(PluginBase):
     # ── REST routes ────────────────────────────────────────────────────
 
     def _register_routes(self, router: APIRouter) -> None:
+
+        # Fetch a fixed public manifest server-side: OSS need not allow the
+        # various desktop WebView origins through CORS. Never proxy media.
+        inspiration_cache: dict[str, Any] = {}
+        inspiration_lock = asyncio.Lock()
+
+        @router.get("/inspiration")
+        async def get_inspiration() -> dict:
+            import httpx
+
+            async with inspiration_lock:
+                if time.monotonic() < inspiration_cache.get("expires", 0):
+                    return inspiration_cache["payload"]
+                try:
+                    async with httpx.AsyncClient(timeout=15.0) as client:
+                        response = await client.get(
+                            "https://openakita-plugin-assets.oss-cn-beijing.aliyuncs.com/"
+                            "happyhorse-video/metadata.json"
+                        )
+                        response.raise_for_status()
+                        manifest = response.json()
+                    if not isinstance(manifest, dict) or not isinstance(manifest.get("items"), list):
+                        raise ValueError("Invalid inspiration manifest")
+                except (httpx.HTTPError, ValueError) as exc:
+                    if "payload" in inspiration_cache:
+                        inspiration_cache["expires"] = time.monotonic() + 30
+                        return inspiration_cache["payload"]
+                    raise HTTPException(502, "灵感素材暂时无法加载，请稍后重试") from exc
+                payload = {"ok": True, "manifest": manifest}
+                inspiration_cache.update(payload=payload, expires=time.monotonic() + 300)
+                return payload
 
         # Catalog --------------------------------------------------------
         @router.get("/catalog")

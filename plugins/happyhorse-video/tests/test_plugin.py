@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
 
 import httpx
 import pytest
@@ -39,6 +40,55 @@ EXPECTED_TOOLS = {
     "hh_storyboard_decompose",
     "hh_video_concat",
 }
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "field", ["first_frame_url", "first_frame_path", "image_url", "image_path"]
+)
+async def test_i2v_create_uploads_local_first_frame_before_pipeline(tmp_path, field):
+    photo = tmp_path / "input.png"
+    photo.write_bytes(b"test image")
+    plugin = HappyhorsePlugin.__new__(HappyhorsePlugin)
+    plugin._client = SimpleNamespace(has_api_key=lambda: True)
+    plugin._settings_cache = {}
+    plugin._data_dir = tmp_path
+    plugin._oss = Mock()
+    plugin._oss.upload_file.return_value = "https://oss.example.com/frame?signature=test"
+    plugin._tm = SimpleNamespace(
+        create_task=AsyncMock(return_value="task"), get_task=AsyncMock(return_value={"id": "task"})
+    )
+    plugin._preflight_asset_specs = AsyncMock()
+    plugin._spawn_pipeline = Mock()
+    body = _HH.CreateTaskBody(
+        mode="i2v", prompt="owl catches mouse", duration=5, **{field: str(photo)}
+    )
+    await plugin._create_task_internal(body)
+    params = plugin._tm.create_task.call_args.kwargs["params"]
+    assert params["first_frame_url"] == plugin._oss.upload_file.return_value
+    assert params["first_frame_path"] == str(photo.resolve())
+    assert plugin._spawn_pipeline.call_args.args[2]["first_frame_url"] == params["first_frame_url"]
+    plugin._oss.upload_file.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_i2v_oss_failure_does_not_create_task(tmp_path):
+    photo = tmp_path / "input.png"
+    photo.write_bytes(b"test image")
+    plugin = HappyhorsePlugin.__new__(HappyhorsePlugin)
+    plugin._client = SimpleNamespace(has_api_key=lambda: True)
+    plugin._settings_cache = {}
+    plugin._data_dir = tmp_path
+    plugin._oss = Mock()
+    plugin._oss.upload_file.side_effect = _HH.OssUploadError("access denied")
+    plugin._tm = SimpleNamespace(create_task=AsyncMock())
+    plugin._preflight_asset_specs = AsyncMock()
+    body = _HH.CreateTaskBody(mode="i2v", prompt="owl", image_path=str(photo))
+    with pytest.raises(_HH.HTTPException) as exc:
+        await plugin._create_task_internal(body)
+    assert exc.value.status_code == 502
+    assert "access denied" in exc.value.detail
+    plugin._tm.create_task.assert_not_called()
 
 
 def _plugin_with_lifecycle_state(*, ready: bool, error: str | None = None):

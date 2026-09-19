@@ -283,3 +283,36 @@ async def test_finalize_rejects_bad_video_dimensions_before_asset_publish(
         )
 
     assert published == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("width,height,passes", [(960, 960, True), (1280, 720, False)])
+async def test_finalize_validates_new_t2v_ratio_without_guessing_pixels(
+    tmp_path, monkeypatch, width, height, passes
+):
+    from happyhorse_inline import asset_probe
+
+    fake_video = tmp_path / "video.mp4"
+    fake_video.write_bytes(b"mock-video")
+    monkeypatch.setattr(
+        asset_probe, "probe_video",
+        lambda _: asset_probe.VideoProbe(width, height, 5.0, "mp4", 10),
+    )
+    ctx = HappyhorsePipelineContext(
+        task_id="new-t2v", mode="t2v",
+        params={"expected_media": {
+            "aspect_ratio": "1:1", "resolution": "720P", "validation": "aspect",
+        }},
+    )
+    ctx.task_dir = tmp_path
+    ctx.video_path = fake_video
+    if passes:
+        await _step_finalize(ctx, "happyhorse-video", _FakeTaskManager(), _noop_emit, base_data_dir=tmp_path)
+        import json
+
+        metadata = json.loads((tmp_path / "metadata.json").read_text(encoding="utf-8"))
+        assert metadata["media_validation"]["passed"] is True
+        assert metadata["media_validation"]["actual"]["width"] == 960
+    else:
+        with pytest.raises(MediaValidationError):
+            await _step_finalize(ctx, "happyhorse-video", _FakeTaskManager(), _noop_emit, base_data_dir=tmp_path)

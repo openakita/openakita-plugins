@@ -95,7 +95,7 @@ MODES: tuple[ModeSpec, ...] = (
         required_assets=("prompt",),
         description_zh="一句中英文描述生成 3-15 秒视频。HappyHorse 1.0 原生音视频同步。",
         description_en="Generate a 3-15 s video from a text prompt. HappyHorse 1.0 emits audio synced natively.",
-        cost_strategy="HappyHorse 720P 0.90 / 1080P 1.60 元/秒；Wan 2.6 720P 0.60 / 1080P 1.00 元/秒",
+        cost_strategy="按所选文生视频模型、分辨率和时长估算（北京地域公开原价）",
     ),
     ModeSpec(
         id="i2v",
@@ -468,6 +468,13 @@ DEFAULT_COST_THRESHOLD_CNY: float = 5.00
 # from earlier placeholders are documented inline (with magnitude) so a
 # future drift audit can grep for "was ".
 PRICE_TABLE: dict[str, dict[str, float]] = {
+    # Beijing list prices, verified 2026-09-18 against each model's official page.
+    "wan3.0-video": {"480P_per_sec": 0.30, "720P_per_sec": 0.60, "1080P_per_sec": 1.20},
+    "wan3.0-video-prime": {"480P_per_sec": 0.45, "720P_per_sec": 0.90, "1080P_per_sec": 1.80},
+    "happyhorse-1.1-t2v": {"480P_per_sec": 0.45, "720P_per_sec": 0.90, "1080P_per_sec": 1.20},
+    "wan2.7-t2v": {"720P_per_sec": 0.60, "1080P_per_sec": 1.00},
+    "wan2.7-t2v-2026-06-12": {"720P_per_sec": 0.60, "1080P_per_sec": 1.00},
+    "wan2.7-t2v-2026-04-25": {"720P_per_sec": 0.60, "1080P_per_sec": 1.00},
     # ── HappyHorse 1.0 family (4 endpoints, same per-second pricing) ──
     "happyhorse-1.0-t2v": {"720P_per_sec": 0.90, "1080P_per_sec": 1.60},
     "happyhorse-1.0-i2v": {"720P_per_sec": 0.90, "1080P_per_sec": 1.60},

@@ -704,9 +704,11 @@ class HappyhorseDashScopeClient(BaseVendorClient):
         if watermark is not None and entry.supports_watermark:
             params["watermark"] = bool(watermark)
         # ``audio`` controls whether the synthesised video carries an
-        # audio track (Wan 2.6 -flash) and toggles the price tier in
-        # the cost preview. Only flash variants accept this currently.
-        if audio is not None and "audio" not in (entry.forbidden_params or ()):
+        # audio track (Wan 3.0 / Wan 2.6 -flash). Only flash variants
+        # change the price tier when the audio track is disabled.
+        if audio is not None and "audio" not in (entry.forbidden_params or ()) and (
+            entry.supports_audio_toggle or "-flash" in model_id or entry.size_format == "size_star"
+        ):
             params["audio"] = bool(audio)
         # shot_type is currently only a Wan 2.6 t2v concept; enforce
         # the enum if the model declares it.
@@ -733,6 +735,8 @@ class HappyhorseDashScopeClient(BaseVendorClient):
                     kind=ERROR_KIND_CLIENT,
                 )
             params["resolution"] = res
+            if mode == "t2v":
+                params["ratio"] = aspect or entry.aspects[0]
         elif entry.size_format == "size_star":
             base_h = _resolution_to_height(resolution or entry.resolutions[0] or "720P")
             params["size"] = _aspect_to_size(aspect or "16:9", base_height=base_h)
@@ -767,6 +771,8 @@ class HappyhorseDashScopeClient(BaseVendorClient):
 
         # ── input dispatch (per input_protocol) ──────────────────────
         input_obj: dict[str, Any] = {}
+        if entry.negative_prompt_location == "input" and "negative_prompt" in params:
+            input_obj["negative_prompt"] = params.pop("negative_prompt")
         if prompt:
             input_obj["prompt"] = prompt
 

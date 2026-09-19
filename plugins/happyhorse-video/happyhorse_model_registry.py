@@ -17,7 +17,11 @@ client / pipeline / UI is the original sin we are designing out:
 Adding a new model is a one-liner here — no client / pipeline / UI
 edits needed unless the model has a *new* protocol or *new* parameters.
 
-Latest models on Aliyun Bailian (DashScope) as of 2026-Q2:
+Video catalog checked against Aliyun Bailian documentation on 2026-09-18:
+
+- Wan 3.0 video / video-prime — text-to-video, 480P–1080P, 2–30 seconds.
+- HappyHorse 1.1 t2v — 480P–1080P, 3–15 seconds.
+- Wan 2.7 t2v and dated snapshots — resolution + ratio, 2–15 seconds.
 
 - HappyHorse 1.0 family — native audio-video sync, 7-language lip-sync,
   ``resolution: "720P" | "1080P"``. **Rejects** ``with_audio`` /
@@ -147,21 +151,24 @@ class ModelEntry:
     #   the "AI generated" mark in the lower-right corner. Wan family.
     # - ``supports_audio_url``: ``input.audio_url`` (Wan 2.6 legacy) or
     #   ``input.media[driving_audio]`` (Wan 2.7) — supply a background
-    #   / driving audio. Only i2v / r2v / v2v variants accept it; t2v
-    #   does not because there is no visual base to sync to.
+    #   / driving audio. Wan 2.7 t2v also accepts input.audio_url.
     # - ``shot_types``: enumerable list for ``parameters.shot_type``;
     #   currently only Wan 2.6 t2v exposes ``("single", "multi")``.
     supports_prompt_extend: bool = False
     supports_negative_prompt: bool = False
     supports_watermark: bool = False
     supports_audio_url: bool = False
+    supports_audio_toggle: bool = False
+    negative_prompt_location: Literal["parameters", "input"] = "parameters"
+    # Some APIs promise ratio + resolution tier, not deterministic pixels.
+    output_dimension_policy: Literal["short_edge", "wan27", "aspect"] = "short_edge"
     shot_types: tuple[str, ...] = ()
     # When True, this model expects an OSS-fetchable signed URL for any
     # input image / video / audio.
     requires_oss: bool = True
     # Whether this model emits audio-synced output natively (no TTS step
-    # needed in the pipeline). HappyHorse 1.0 family is True; everything
-    # else is False (and pipeline runs cosyvoice / edge-tts first).
+    # needed in the pipeline). HappyHorse and newer Wan T2V models
+    # advertise this; digital-human flows may still need TTS first.
     native_audio_sync: bool = False
     is_default: bool = False
 
@@ -185,6 +192,8 @@ class ModelEntry:
             "supports_negative_prompt": self.supports_negative_prompt,
             "supports_watermark": self.supports_watermark,
             "supports_audio_url": self.supports_audio_url,
+            "supports_audio_toggle": self.supports_audio_toggle,
+            "output_dimension_policy": self.output_dimension_policy,
             "shot_types": list(self.shot_types),
             "requires_oss": self.requires_oss,
             "native_audio_sync": self.native_audio_sync,
@@ -216,6 +225,83 @@ _WAN_NEW_RES = ("720P", "1080P")
 
 REGISTRY: tuple[ModelEntry, ...] = (
     # ── t2v ────────────────────────────────────────────────────────────
+    *(
+        ModelEntry(
+            mode="t2v",
+            model_id=model_id,
+            label_zh=label,
+            label_en=label_en,
+            endpoint_family="video_synthesis",
+            protocol_version="new_async",
+            size_format="resolution_p",
+            cost_note=cost,
+            resolutions=("720P", "1080P", "480P"),
+            aspects=("16:9", "9:16", "1:1", "4:3", "3:4", "21:9"),
+            duration_range=(2, 30),
+            supports_prompt_extend=True,
+            supports_watermark=True,
+            supports_audio_toggle=True,
+            output_dimension_policy="aspect",
+            native_audio_sync=True,
+        )
+        for model_id, label, label_en, cost in (
+            (
+                "wan3.0-video",
+                "万相 3.0 文生视频",
+                "Wan 3.0 T2V",
+                "480P 0.30 / 720P 0.60 / 1080P 1.20 元/秒",
+            ),
+            (
+                "wan3.0-video-prime",
+                "万相 3.0 Prime 文生视频（优速版）",
+                "Wan 3.0 Prime T2V",
+                "480P 0.45 / 720P 0.90 / 1080P 1.80 元/秒",
+            ),
+        )
+    ),
+    ModelEntry(
+        mode="t2v",
+        model_id="happyhorse-1.1-t2v",
+        label_zh="HappyHorse 1.1 文生视频",
+        label_en="HappyHorse 1.1 T2V",
+        endpoint_family="video_synthesis",
+        protocol_version="new_async",
+        size_format="resolution_p",
+        cost_note="480P 0.45 / 720P 0.90 / 1080P 1.20 元/秒",
+        resolutions=("720P", "1080P", "480P"),
+        aspects=("16:9", "9:16", "1:1", "4:3", "3:4", "4:5", "5:4", "9:21", "21:9"),
+        duration_range=(3, 15),
+        forbidden_params=_HAPPYHORSE_FORBIDDEN,
+        supports_watermark=True,
+        output_dimension_policy="aspect",
+        native_audio_sync=True,
+    ),
+    *(
+        ModelEntry(
+            mode="t2v",
+            model_id=model_id,
+            label_zh=f"万相 2.7 文生视频{suffix}",
+            label_en=f"Wan 2.7 T2V{suffix}",
+            endpoint_family="video_synthesis",
+            protocol_version="new_async",
+            size_format="resolution_p",
+            cost_note="720P 0.60 / 1080P 1.00 元/秒",
+            resolutions=_WAN_NEW_RES,
+            duration_range=(2, 15),
+            supports_prompt_extend=True,
+            supports_negative_prompt=True,
+            supports_watermark=True,
+            supports_audio_url=True,
+            negative_prompt_location="input",
+            output_dimension_policy="wan27",
+            native_audio_sync=True,
+        )
+        for model_id, suffix in (
+            ("wan2.7-t2v", ""),
+            ("wan2.7-t2v-2026-06-12", "（2026-06-12）"),
+            ("wan2.7-t2v-2026-04-25", "（2026-04-25）"),
+        )
+    ),
     ModelEntry(
         mode="t2v",
         model_id="happyhorse-1.0-t2v",

@@ -276,9 +276,7 @@ def image_target_for(aspect_ratio: str, size: str) -> MediaTarget:
             raise ValueError(f"无效图片像素规格: {size!r}")
         ratio_error = abs((width / height) - (ratio_w / ratio_h)) / (ratio_w / ratio_h)
         if ratio_error > 0.01:
-            raise ValueError(
-                f"图片像素规格 {width}x{height} 与目标画幅 {aspect_ratio} 不一致"
-            )
+            raise ValueError(f"图片像素规格 {width}x{height} 与目标画幅 {aspect_ratio} 不一致")
         return MediaTarget(aspect_ratio, width, height)
 
     long_edges = {"1K": 1024, "2K": 2048, "4K": 4096}
@@ -294,8 +292,32 @@ def image_target_for(aspect_ratio: str, size: str) -> MediaTarget:
     return MediaTarget(aspect_ratio, width, height)
 
 
-def video_target_for(aspect_ratio: str, resolution: str) -> MediaTarget:
+def video_target_for(
+    aspect_ratio: str, resolution: str, *, dimension_policy: str = "short_edge"
+) -> MediaTarget:
     """Resolve a video resolution label to explicit encoded dimensions."""
+
+    if dimension_policy == "wan27":
+        # Official Wan 2.7 T2V table; resolution is a total-pixel tier,
+        # not the short edge (e.g. 720P square is 960x960).
+        dimensions = {
+            "720P": {
+                "16:9": (1280, 720),
+                "9:16": (720, 1280),
+                "1:1": (960, 960),
+                "4:3": (1104, 832),
+                "3:4": (832, 1104),
+            },
+            "1080P": {
+                "16:9": (1920, 1080),
+                "9:16": (1080, 1920),
+                "1:1": (1440, 1440),
+                "4:3": (1648, 1248),
+                "3:4": (1248, 1648),
+            },
+        }
+        width, height = dimensions[resolution.upper()][aspect_ratio]
+        return MediaTarget(aspect_ratio, width, height)
 
     ratio_w, ratio_h = _parse_aspect_ratio(aspect_ratio)
     normalized = str(resolution or "720P").strip().upper()

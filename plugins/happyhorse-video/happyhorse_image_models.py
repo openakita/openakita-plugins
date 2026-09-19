@@ -9,6 +9,34 @@ images inside the same app, then pass the produced ``asset_ids`` directly into
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import gcd, isqrt
+
+IMAGE_ASPECTS = ("1:1", "2:3", "3:4", "4:5", "9:16", "3:2", "4:3", "5:4", "16:9")
+
+
+def image_size_presets(model_id: str, sizes: tuple[str, ...]) -> list[dict[str, str]]:
+    """Expose exact pixel choices using each model's total pixel budgets."""
+    presets = []
+    for size in sizes:
+        if model_id.startswith("wan2.7-") or model_id == "wan2.6-image":
+            edge = {"1K": 1024, "2K": 2048, "4K": 4096}[size]
+            if model_id == "wan2.6-image" and size == "1K":
+                edge = 1280
+            for ratio in IMAGE_ASPECTS:
+                w, h = map(int, ratio.split(":"))
+                scale = isqrt(edge * edge // (w * h)) // 16 * 16
+                presets.append(
+                    {
+                        "size": f"{w * scale}*{h * scale}",
+                        "ratio": ratio,
+                        "tier": size,
+                    }
+                )
+        elif "*" in size:
+            w, h = map(int, size.split("*"))
+            divisor = gcd(w, h)
+            presets.append({"size": size, "ratio": f"{w // divisor}:{h // divisor}", "tier": ""})
+    return presets
 
 
 @dataclass(frozen=True)
@@ -44,6 +72,7 @@ class ImageModelSpec:
     supports_prompt_extend: bool = False
     supports_thinking: bool = False
     supports_sequential: bool = False
+    modes: tuple[str, ...] = ("image_text2img", "image_edit", "image_ecommerce")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -53,11 +82,13 @@ class ImageModelSpec:
             "category": self.category,
             "api_type": self.api_type,
             "sizes": list(self.sizes),
+            "size_presets": image_size_presets(self.model_id, self.sizes),
             "max_input_images": self.max_input_images,
             "supports_negative": self.supports_negative,
             "supports_prompt_extend": self.supports_prompt_extend,
             "supports_thinking": self.supports_thinking,
             "supports_sequential": self.supports_sequential,
+            "modes": list(self.modes),
         }
 
 
@@ -179,6 +210,7 @@ IMAGE_MODELS: tuple[ImageModelSpec, ...] = (
         max_input_images=4,
         supports_negative=True,
         supports_prompt_extend=True,
+        modes=("image_edit",),
     ),
 )
 

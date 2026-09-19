@@ -67,11 +67,11 @@ def test_registry_payload_build_is_serializable():
     assert all("mode" in m for m in payload.models)
 
 
-def test_native_audio_sync_only_on_happyhorse_video_modes():
-    """HappyHorse 1.0 family is the only one with native audio sync."""
+def test_native_audio_sync_models_are_supported_video_families():
+    """Native audio is supported by HappyHorse and the newer Wan T2V models."""
     for entry in REGISTRY:
         if entry.native_audio_sync:
-            assert entry.model_id.startswith("happyhorse-1.0-"), (
+            assert entry.model_id.startswith(("happyhorse-", "wan3.0-", "wan2.7-t2v")), (
                 f"unexpected native_audio_sync on {entry.model_id}"
             )
 

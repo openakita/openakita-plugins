@@ -62,6 +62,7 @@ from happyhorse_dashscope_client import (
 from happyhorse_inline.asset_probe import (
     MediaTarget,
     MediaValidationError,
+    assert_media_aspect,
     assert_media_dimensions,
 )
 from happyhorse_inline.vendor_client import VendorError
@@ -973,12 +974,21 @@ async def _step_finalize(
                     "actual": {"width": 0, "height": 0},
                 }
             )
-        validation = await asyncio.to_thread(
-            assert_media_dimensions,
-            ctx.video_path,
-            kind="video",
-            target=target,
-        )
+        if expected_media.get("validation") == "aspect":
+            validation = await asyncio.to_thread(
+                assert_media_aspect,
+                ctx.video_path,
+                kind="video",
+                aspect_ratio=target.aspect_ratio,
+                tolerance=0.02,
+            )
+        else:
+            validation = await asyncio.to_thread(
+                assert_media_dimensions,
+                ctx.video_path,
+                kind="video",
+                target=target,
+            )
 
     # ── Asset Bus integration ────────────────────────────────────────
     # The plugin layer optionally injects ``_publish_asset`` to register
