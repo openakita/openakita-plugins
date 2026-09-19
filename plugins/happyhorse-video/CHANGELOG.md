@@ -4,6 +4,23 @@ All notable changes to this plugin are recorded here. The plugin follows
 [SemVer](https://semver.org/) and the project's standard
 "date-versioned changelog" convention.
 
+## [1.2.0] — 2026-09-19
+
+### Added
+
+- Generate text-to-video with Wan 3.0, Wan 3.0 Prime, HappyHorse 1.1,
+  and Wan 2.7, including its dated model variants.
+- Browse image and video inspiration galleries, preview videos on hover,
+  and reuse a sample's prompt and a supported aspect ratio in the creation form.
+- Choose image dimensions and aspect ratios supported by the selected model.
+
+### Fixed
+
+- Local first-frame images are uploaded to OSS before video generation;
+  upload failures are reported before a task is created.
+- Image task progress now describes image generation instead of video generation.
+- Video output checks and cost estimates respect the selected model's capabilities.
+
 ## [1.1.0] — 2026-05-17
 
 ### Added
